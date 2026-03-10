@@ -1,0 +1,6 @@
+@OnTimeCRM.API_HostAddress = http://localhost:5085
+
+GET {{OnTimeCRM.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

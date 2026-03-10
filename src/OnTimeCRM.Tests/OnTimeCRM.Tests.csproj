@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>OnTimeCRM.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Test framework -->
+    <PackageReference Include="xunit"                                      Version="2.*" />
+    <PackageReference Include="xunit.runner.visualstudio"                  Version="2.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk"                     Version="17.*" />
+
+    <!-- Assertions -->
+    <PackageReference Include="Shouldly"                                    Version="4.*" />
+
+    <!-- Real ASP.NET Core in-process host -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing"           Version="8.*" />
+
+    <!-- Real Postgres via Docker -->
+    <PackageReference Include="Testcontainers.PostgreSql"                  Version="3.*" />
+
+    <!-- DB reset between tests (faster than drop/recreate) -->
+    <PackageReference Include="Respawn"                                     Version="6.*" />
+
+    <!-- Realistic fake data (Portuguese locale) -->
+    <PackageReference Include="Bogus"                                       Version="35.*" />
+
+    <!-- Mock Stripe + Ifthenpay webhooks -->
+    <PackageReference Include="WireMock.Net"                               Version="1.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference all layers so tests can use real types + direct DB assertions -->
+    <ProjectReference Include="..\OnTimeCRM.API\OnTimeCRM.API.csproj" />
+    <ProjectReference Include="..\OnTimeCRM.Application\OnTimeCRM.Application.csproj" />
+    <ProjectReference Include="..\OnTimeCRM.Infrastructure\OnTimeCRM.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

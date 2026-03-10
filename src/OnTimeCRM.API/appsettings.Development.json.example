@@ -1,0 +1,51 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5434;Database=ontimecrm;Username=postgres;Password=postgres"
+  },
+  "Jwt": {
+    "Key": "REPLACE-WITH-A-RANDOM-SECRET-MINIMUM-32-CHARS",
+    "Issuer": "OnTimeCRM",
+    "Audience": "OnTimeCRM-Frontend",
+    "ExpirationMinutes": 480
+  },
+  "Cors": {
+    "AllowedOrigins": [
+      "http://localhost:5173",
+      "http://localhost:3000"
+    ]
+  },
+  "AdminBootstrap": {
+    "Email": "admin@ontimecrm.io",
+    "Password": "REPLACE-WITH-A-STRONG-PASSWORD",
+    "FullName": "Administrador",
+    "CompanyName": "OnTimeCRM Demo",
+    "BrandName": "Stand Demo"
+  },
+  "Subscription": {
+    "Plans": {
+      "Monthly": { "Price": 15.00 },
+      "Annual": { "Price": 149.00 }
+    },
+    "TrialDays": 14,
+    "GracePeriodDays": 3
+  },
+  "Stripe": {
+    "SecretKey": "sk_test_REPLACE",
+    "PublishableKey": "pk_test_REPLACE",
+    "WebhookSecret": "whsec_REPLACE"
+  },
+  "Ifthenpay": {
+    "MBWayKey": "REPLACE",
+    "MultibancoKey": "REPLACE",
+    "Entity": "REPLACE",
+    "CallbackSecretKey": "REPLACE",
+    "BaseUrl": "https://ifthenpay.com/api"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore.Database.Command": "Warning"
+    }
+  }
+}
