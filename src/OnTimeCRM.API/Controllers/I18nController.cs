@@ -51,6 +51,21 @@ public class I18nController : ControllerBase
         ["NAV.ADMIN"]               = "Administração",
         ["NAV.GOALS"]               = "Objetivos",
         ["NAV.ACCESS_CONTROL"]      = "Controlo de Acesso",
+        ["NAV.HELP"]                = "Como Funciona",
+
+        // ── Page: Help / How-it-works guide ──────────────────────────────────
+        ["PAGE.HELP.TITLE"]              = "Como Funciona",
+        ["PAGE.HELP.SUBTITLE"]           = "Um resumo visual dos fluxos principais da aplicação.",
+        ["PAGE.HELP.PIPELINE_TITLE"]     = "Pipeline de Clientes",
+        ["PAGE.HELP.PIPELINE_DESC"]      = "Cada cliente avança por etapas configuráveis (Funil) até à venda. A temperatura (Quente/Morno/Frio) indica a urgência do contacto.",
+        ["PAGE.HELP.PROPOSALS_TITLE"]    = "Propostas",
+        ["PAGE.HELP.PROPOSALS_DESC"]     = "Cria propostas com um ou mais veículos, versão, cor e preço. Ficam associadas ao cliente e ao histórico de negociação.",
+        ["PAGE.HELP.SALES_TITLE"]        = "Vendas",
+        ["PAGE.HELP.SALES_DESC"]         = "Quando uma proposta é aceite, regista a venda com a data real do negócio — fica disponível no histórico e nas estatísticas do Dashboard.",
+        ["PAGE.HELP.GOALS_TITLE"]        = "Objetivos",
+        ["PAGE.HELP.GOALS_DESC"]         = "Define metas pessoais (vendas, propostas, novos clientes) por período — diário, semanal, mensal ou anual — e acompanha o progresso em tempo real.",
+        ["PAGE.HELP.FRIENDS_TITLE"]      = "Amigos",
+        ["PAGE.HELP.FRIENDS_DESC"]       = "Liga-te a colegas de outros stands para comparar resultados e perfis públicos, sem expor dados sensíveis como comissões.",
 
         // ── Labels — Generic ────────────────────────────────────────────────
         ["LABEL.NAME"]                     = "Nome",
@@ -523,6 +538,21 @@ public class I18nController : ControllerBase
         ["NAV.ADMIN"]               = "Administration",
         ["NAV.GOALS"]               = "Goals",
         ["NAV.ACCESS_CONTROL"]      = "Access Control",
+        ["NAV.HELP"]                = "How It Works",
+
+        // ── Page: Help / How-it-works guide ──────────────────────────────────
+        ["PAGE.HELP.TITLE"]              = "How It Works",
+        ["PAGE.HELP.SUBTITLE"]           = "A visual summary of the app's main flows.",
+        ["PAGE.HELP.PIPELINE_TITLE"]     = "Client Pipeline",
+        ["PAGE.HELP.PIPELINE_DESC"]      = "Each client moves through configurable stages (Funnel) until the sale. Temperature (Hot/Warm/Cold) signals how urgent the follow-up is.",
+        ["PAGE.HELP.PROPOSALS_TITLE"]    = "Proposals",
+        ["PAGE.HELP.PROPOSALS_DESC"]     = "Create proposals with one or more vehicles, version, color and price. They stay linked to the client and the negotiation history.",
+        ["PAGE.HELP.SALES_TITLE"]        = "Sales",
+        ["PAGE.HELP.SALES_DESC"]         = "Once a proposal is accepted, record the sale with the real deal date — it then shows up in history and Dashboard stats.",
+        ["PAGE.HELP.GOALS_TITLE"]        = "Goals",
+        ["PAGE.HELP.GOALS_DESC"]         = "Set personal targets (sales, proposals, new clients) per period — daily, weekly, monthly or annual — and track live progress.",
+        ["PAGE.HELP.FRIENDS_TITLE"]      = "Friends",
+        ["PAGE.HELP.FRIENDS_DESC"]       = "Connect with colleagues from other dealerships to compare results and public profiles, without exposing sensitive data like commissions.",
 
         ["PAGE.GOALS.TITLE"]                = "My Goals",
         ["PAGE.ACCESS_CONTROL.TITLE"]       = "Access Control",
