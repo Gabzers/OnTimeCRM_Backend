@@ -53,7 +53,7 @@ public class VehicleService : IVehicleService
         var brand = await _repo.FindBrandAsync(req.BrandId, ct)
             ?? throw new ApiException(ApiErrorCatalog.VEHICLE_BRAND_NOT_FOUND);
 
-        // The vehicle brands a user can create models under are configured per-Filial by
+        // The vehicle brands a user can create models under are configured per-Stand by
         // Manager/Admin (see USER-BRANDS.md) — not picked by the user themselves anymore.
         if (!await _repo.IsBrandAllowedForUserAsync(userId, req.BrandId, ct))
             throw new ApiException(ApiErrorCatalog.VEHICLE_BRAND_NOT_ALLOWED);

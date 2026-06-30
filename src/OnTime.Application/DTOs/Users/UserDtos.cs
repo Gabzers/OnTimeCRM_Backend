@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using OnTime.Application.Common;
 
 namespace OnTime.Application.DTOs.Users;
 
@@ -38,7 +39,7 @@ public record SetUserActiveRequest(bool IsActive);
 
 public record ChangePasswordRequest(
     [Required] string CurrentPassword,
-    [Required][MinLength(8)] string NewPassword
+    [Required][StrongPassword] string NewPassword
 );
 
 /// <summary>

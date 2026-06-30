@@ -38,7 +38,7 @@ public static class ApiErrorCatalog
     public static readonly ApiError VEHICLE_BRAND_EXISTS         = new("VEHICLE_BRAND_EXISTS",         "Vehicle brand already exists.",          "Conflict",    409);
     public static readonly ApiError VEHICLE_MODEL_IN_USE         = new("VEHICLE_MODEL_IN_USE",         "Vehicle model is used in a proposal or sale and cannot be deleted.", "UnprocessableEntity", 422);
     public static readonly ApiError VEHICLE_MODEL_FORBIDDEN      = new("VEHICLE_MODEL_FORBIDDEN",      "Vehicle model does not belong to you.",  "Forbidden",   403);
-    public static readonly ApiError VEHICLE_BRAND_NOT_ALLOWED    = new("VEHICLE_BRAND_NOT_ALLOWED",    "Your Filial doesn't sell this vehicle brand.", "Forbidden", 403);
+    public static readonly ApiError VEHICLE_BRAND_NOT_ALLOWED    = new("VEHICLE_BRAND_NOT_ALLOWED",    "Your Stand doesn't sell this vehicle brand.", "Forbidden", 403);
 
     // ── Notification ──────────────────────────────────────────────────────────
     public static readonly ApiError NOTIFICATION_NOT_FOUND       = new("NOTIFICATION_NOT_FOUND",       "Notification not found.",                "NotFound",    404);
@@ -63,6 +63,9 @@ public static class ApiErrorCatalog
     public static readonly ApiError BRAND_INACTIVE               = new("BRAND_INACTIVE",               "Brand is inactive.",                     "UnprocessableEntity", 422);
     public static readonly ApiError BRAND_WRONG_COMPANY          = new("BRAND_WRONG_COMPANY",          "Brand does not belong to this company.", "Forbidden",   403);
     public static readonly ApiError USER_WRONG_BRAND             = new("USER_WRONG_BRAND",             "User does not belong to this brand.",    "Forbidden",   403);
+
+    // ── Goal ──────────────────────────────────────────────────────────────────
+    public static readonly ApiError GOAL_PERCENT_OUT_OF_RANGE    = new("GOAL_PERCENT_OUT_OF_RANGE",    "A Conversion Rate goal's target must be between 0 and 100.", "UnprocessableEntity", 422);
 
     // ── Lead Source ──────────────────────────────────────────────────────────
     public static readonly ApiError LEAD_SOURCE_NOT_FOUND        = new("LEAD_SOURCE_NOT_FOUND",        "Lead source not found.",                 "NotFound",    404);

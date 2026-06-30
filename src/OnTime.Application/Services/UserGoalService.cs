@@ -23,7 +23,8 @@ public class UserGoalService : IUserGoalService
         var goals = await _db.UserGoals
             .AsNoTracking()
             .Where(g => g.UserId == userId && g.IsActive)
-            .OrderByDescending(g => g.CreatedAt)
+            .OrderBy(g => g.SortOrder)
+            .ThenByDescending(g => g.CreatedAt)
             .ToListAsync(ct);
 
         if (!goals.Any()) return [];
@@ -88,6 +89,14 @@ public class UserGoalService : IUserGoalService
 
     public async Task<UserGoalDto> CreateGoalAsync(Guid userId, CreateUserGoalRequest request, CancellationToken ct = default)
     {
+        if (request.MetricType == (int)GoalMetricType.ConversionRate && request.TargetValue > 100)
+            throw new ApiException(ApiErrorCatalog.GOAL_PERCENT_OUT_OF_RANGE);
+
+        var maxOrder = await _db.UserGoals
+            .Where(g => g.UserId == userId && g.IsActive)
+            .Select(g => (int?)g.SortOrder)
+            .MaxAsync(ct);
+
         var goal = new UserGoal
         {
             UserId      = userId,
@@ -97,6 +106,7 @@ public class UserGoalService : IUserGoalService
             StartDate   = request.StartDate,
             EndDate     = request.EndDate,
             ShowOnDashboard = request.ShowOnDashboard,
+            SortOrder   = (maxOrder ?? -1) + 1,
         };
 
         _db.UserGoals.Add(goal);
@@ -104,9 +114,29 @@ public class UserGoalService : IUserGoalService
         return ToDto(goal);
     }
 
+    public async Task ReorderGoalsAsync(Guid userId, ReorderGoalsRequest request, CancellationToken ct = default)
+    {
+        var goals = await _db.UserGoals
+            .Where(g => g.UserId == userId && g.IsActive)
+            .ToListAsync(ct);
+
+        var goalsById = goals.ToDictionary(g => g.Id);
+        for (var i = 0; i < request.OrderedIds.Count; i++)
+        {
+            if (goalsById.TryGetValue(request.OrderedIds[i], out var goal))
+                goal.SortOrder = i;
+        }
+
+        await _uow.SaveChangesAsync(ct);
+    }
+
     public async Task<UserGoalDto> UpdateGoalAsync(Guid userId, Guid goalId, UpdateUserGoalRequest request, CancellationToken ct = default)
     {
         var goal = await FindOwnedAsync(userId, goalId, ct);
+
+        if (goal.MetricType == GoalMetricType.ConversionRate && request.TargetValue > 100)
+            throw new ApiException(ApiErrorCatalog.GOAL_PERCENT_OUT_OF_RANGE);
+
         goal.TargetValue     = request.TargetValue;
         goal.StartDate       = request.StartDate;
         goal.EndDate         = request.EndDate;
@@ -135,5 +165,5 @@ public class UserGoalService : IUserGoalService
     }
 
     private static UserGoalDto ToDto(UserGoal g) =>
-        new(g.Id, (int)g.MetricType, (int)g.Period, g.TargetValue, g.StartDate, g.EndDate, g.ShowOnDashboard, g.CreatedAt);
+        new(g.Id, (int)g.MetricType, (int)g.Period, g.TargetValue, g.StartDate, g.EndDate, g.ShowOnDashboard, g.CreatedAt, g.SortOrder);
 }

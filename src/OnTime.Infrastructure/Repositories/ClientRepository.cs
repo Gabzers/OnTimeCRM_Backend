@@ -25,21 +25,44 @@ public sealed class ClientRepository : IClientRepository
         var page = Math.Max(filter.Page, 1);
         var size = Math.Clamp(filter.PageSize, 1, 50);
 
-        var rows = await _db.Database
-            .SqlQuery<ClientPagedRow>(
-                $"SELECT * FROM fn_get_clients_paged({userId}, {brandId}, {filter.StageId}, {filter.Temperature}, {filter.LeadSource}, {filter.Search}, {page}, {size})")
+        var query = _db.Clients
+            .AsNoTracking()
+            .Include(c => c.CurrentStage)
+            .Where(c => c.IsActive)
+            .Where(c => brandId.HasValue
+                ? _db.Users.Any(u => u.Id == c.UserId && u.BrandId == brandId.Value && u.IsActive)
+                : c.UserId == userId);
+
+        if (filter.StageId.HasValue)
+            query = query.Where(c => c.CurrentStageId == filter.StageId.Value);
+        if (filter.Temperature.HasValue)
+            query = query.Where(c => (int)c.Temperature == filter.Temperature.Value);
+        if (filter.LeadSource.HasValue)
+            query = query.Where(c => c.LeadSource == filter.LeadSource.Value);
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var s = filter.Search.ToLower();
+            query = query.Where(c =>
+                c.FullName.ToLower().Contains(s) ||
+                (c.Phone != null && c.Phone.ToLower().Contains(s)) ||
+                (c.Email != null && c.Email.ToLower().Contains(s)));
+        }
+
+        var total = await query.CountAsync(ct);
+
+        var items = await query
+            .OrderByDescending(c => c.LastInteractionAt ?? c.CreatedAt)
+            .Skip((page - 1) * size)
+            .Take(size)
+            .Select(c => new ClientListDto(
+                c.Id, c.FullName, c.Phone, c.Email,
+                c.LeadSource, (int)c.Temperature,
+                c.CurrentStageId, c.CurrentStage.Name, c.CurrentStage.Color,
+                c.CurrentStage.IsFinal, c.CurrentStage.IsWon, c.CurrentStage.IsLost,
+                c.LastInteractionAt, c.CreatedAt))
             .ToListAsync(ct);
 
-        var total = rows.FirstOrDefault()?.TotalCount ?? 0;
-        var items = rows.Select(r => new ClientListDto(
-            r.Id, r.FullName, r.Phone, r.Email,
-            r.LeadSource, r.Temperature,
-            r.CurrentStageId, r.StageName, r.StageColor,
-            r.StageIsFinal, r.StageIsWon, r.StageIsLost,
-            r.LastInteractionAt, r.CreatedAt))
-            .ToList();
-
-        return new PagedResult<ClientListDto>(items, (int)total, page, size);
+        return new PagedResult<ClientListDto>(items, total, page, size);
     }
 
     // ── Find ─────────────────────────────────────────────────────────────────
@@ -60,23 +83,28 @@ public sealed class ClientRepository : IClientRepository
                     .ThenInclude(v => v.Model)
             .FirstOrDefaultAsync(c => c.Id == id && c.IsActive, ct);
 
-    // ── Hot deals — PostgreSQL fn_get_hot_deals ───────────────────────────
+    // ── Hot deals ────────────────────────────────────────────────────────────
     public async Task<IEnumerable<ClientListDto>> GetHotDealsAsync(
         Guid userId,
         CancellationToken ct = default)
     {
         const int limit = 10;
-        var rows = await _db.Database
-            .SqlQuery<HotDealRow>($"SELECT * FROM fn_get_hot_deals({userId}, {limit})")
-            .ToListAsync(ct);
+        const int hot = 0; // DealTemperature.Hot
 
-        // fn_get_hot_deals already filters to non-final stages only.
-        return rows.Select(r => new ClientListDto(
-            r.Id, r.FullName, r.Phone, r.Email,
-            r.LeadSource, r.Temperature,
-            r.CurrentStageId, r.StageName, r.StageColor,
-            CurrentStageIsFinal: false, CurrentStageIsWon: false, CurrentStageIsLost: false,
-            r.LastInteractionAt, r.CreatedAt));
+        return await _db.Clients
+            .AsNoTracking()
+            .Include(c => c.CurrentStage)
+            .Where(c => c.UserId == userId && c.IsActive
+                && (int)c.Temperature == hot && !c.CurrentStage.IsFinal)
+            .OrderByDescending(c => c.LastInteractionAt)
+            .Take(limit)
+            .Select(c => new ClientListDto(
+                c.Id, c.FullName, c.Phone, c.Email,
+                c.LeadSource, (int)c.Temperature,
+                c.CurrentStageId, c.CurrentStage.Name, c.CurrentStage.Color,
+                false, false, false,
+                c.LastInteractionAt, c.CreatedAt))
+            .ToListAsync(ct);
     }
 
     // ── History & sales history ───────────────────────────────────────────
@@ -124,19 +152,4 @@ public sealed class ClientRepository : IClientRepository
     public void AddProposalVehicle(ProposalVehicle pv) => _db.ProposalVehicles.Add(pv);
     public void AddHistory(ClientStageHistory history) => _db.ClientStageHistories.Add(history);
     public void AddNotification(Notification notification) => _db.Notifications.Add(notification);
-
-    // ── Private result types for PG function mapping ──────────────────────
-    private record ClientPagedRow(
-        Guid Id, string FullName, string? Phone, string? Email,
-        int LeadSource, int Temperature,
-        Guid CurrentStageId, string StageName, string? StageColor,
-        bool StageIsFinal, bool StageIsWon, bool StageIsLost,
-        DateTimeOffset? LastInteractionAt, DateTimeOffset CreatedAt,
-        long TotalCount);
-
-    private record HotDealRow(
-        Guid Id, string FullName, string? Phone, string? Email,
-        int LeadSource, int Temperature,
-        Guid CurrentStageId, string StageName, string? StageColor,
-        DateTimeOffset? LastInteractionAt, DateTimeOffset CreatedAt);
 }

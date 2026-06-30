@@ -11,7 +11,7 @@ public interface IBrandRepository
 
     void Add(Brand brand);
 
-    // ── Vehicle brands the Filial sells (see USER-BRANDS.md) ────────────────
+    // ── Vehicle brands the Stand sells (see USER-BRANDS.md) ────────────────
     Task<IEnumerable<Guid>> GetVehicleBrandIdsAsync(Guid brandId, CancellationToken ct = default);
     Task SetVehicleBrandIdsAsync(Guid brandId, IEnumerable<Guid> vehicleBrandIds, CancellationToken ct = default);
 

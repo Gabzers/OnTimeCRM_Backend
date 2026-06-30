@@ -9,9 +9,9 @@ using OnTime.Tests.Infrastructure;
 namespace OnTime.Tests.Flows;
 
 /// <summary>
-/// Multi-Filial membership (2026-06-27): a user can belong to several companies/filiais.
-/// User.CompanyId/BrandId stay the "currently active" Filial carried in the JWT — membership is
-/// just the set of Filiais a user is allowed to switch into. See 04-DECISIONS and USER-BRANDS.md.
+/// Multi-Stand membership (2026-06-27): a user can belong to several companies/filiais.
+/// User.CompanyId/BrandId stay the "currently active" Stand carried in the JWT — membership is
+/// just the set of Stands a user is allowed to switch into. See 04-DECISIONS and USER-BRANDS.md.
 /// </summary>
 [Collection("Integration")]
 public class MembershipFlowTests : IAsyncLifetime
@@ -24,7 +24,7 @@ public class MembershipFlowTests : IAsyncLifetime
     public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
-    public async Task Registration_GrantsMembershipInTheCreatedFilial()
+    public async Task Registration_GrantsMembershipInTheCreatedStand()
     {
         var manager = await TestHelpers.RegisterManagerAsync(_factory.Client);
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, manager.UserId);
@@ -62,7 +62,7 @@ public class MembershipFlowTests : IAsyncLifetime
             _factory.Client, otherManager.CompanyId, otherManager.BrandId);
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, salesperson.UserId);
 
-        // A second Filial under a different company, that the salesperson does NOT belong to yet.
+        // A second Stand under a different company, that the salesperson does NOT belong to yet.
         var secondCompanyManager = await TestHelpers.RegisterManagerAsync(_factory.Client);
 
         var grantResp = await _factory.Client.PostAsJsonAsync(

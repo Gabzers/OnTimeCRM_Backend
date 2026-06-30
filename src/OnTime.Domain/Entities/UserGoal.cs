@@ -16,4 +16,7 @@ public class UserGoal : BaseEntity
 
     /// <summary>Pinned to the dashboard home screen. At most a handful per user in practice.</summary>
     public bool ShowOnDashboard { get; set; }
+
+    /// <summary>User-controlled display order (lower first) — see ROADMAP.md.</summary>
+    public int SortOrder { get; set; }
 }

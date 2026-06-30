@@ -52,7 +52,7 @@ public sealed class BrandRepository : IBrandRepository
 
     public void Add(Brand brand) => _db.Brands.Add(brand);
 
-    // ── Vehicle brands the Filial sells ──────────────────────────────────────
+    // ── Vehicle brands the Stand sells ──────────────────────────────────────
 
     public async Task<IEnumerable<Guid>> GetVehicleBrandIdsAsync(Guid brandId, CancellationToken ct = default) =>
         await _db.BrandVehicleBrands
@@ -73,7 +73,7 @@ public sealed class BrandRepository : IBrandRepository
         foreach (var vehicleBrandId in newSet.Except(existingSet))
             _db.BrandVehicleBrands.Add(new BrandVehicleBrand { BrandId = brandId, VehicleBrandId = vehicleBrandId });
 
-        // Removing a vehicle brand from the Filial just removes this row — personal catalogs
+        // Removing a vehicle brand from the Stand just removes this row — personal catalogs
         // (UserVehicleModel/UserVehicleVersion) stay untouched, they just stop matching
         // VehicleRepository.GetModelsAsync's visibility filter (hidden, not deleted).
         foreach (var rel in existing.Where(x => !newSet.Contains(x.VehicleBrandId)))

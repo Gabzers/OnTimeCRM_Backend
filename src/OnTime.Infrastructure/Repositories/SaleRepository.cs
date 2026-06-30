@@ -4,6 +4,7 @@ using OnTime.Application.DTOs.Clients;
 using OnTime.Application.DTOs.Sales;
 using OnTime.Application.Interfaces.Repositories;
 using OnTime.Domain.Entities;
+using OnTime.Domain.Enums;
 using OnTime.Infrastructure.Persistence;
 
 namespace OnTime.Infrastructure.Repositories;
@@ -104,85 +105,106 @@ public sealed class SaleRepository : ISaleRepository
         await _db.Sales
             .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId, ct);
 
-    // ── Dashboard — calls PG functions for all aggregations ───────────────
+    // ── Dashboard ────────────────────────────────────────────────────────
     public async Task<DashboardDto> GetDashboardAsync(Guid userId, CancellationToken ct = default)
     {
-        // 1. KPIs — single PG function call
-        var kpiRow = await _db.Database
-            .SqlQuery<DashboardKpiRow>($"SELECT * FROM fn_get_dashboard_kpis({userId})")
-            .FirstOrDefaultAsync(ct) ?? new DashboardKpiRow(0, 0, 0, 0, 0, 0);
+        var now = DateTimeOffset.UtcNow;
+        var monthStart = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        var monthEnd = monthStart.AddMonths(1);
 
-        // 2. Monthly stats — PG function returns 12 rows
-        var monthlyRows = await _db.Database
-            .SqlQuery<MonthlyStatRow>($"SELECT * FROM fn_get_monthly_stats({userId}, {6})")
-            .ToListAsync(ct);
+        // 1. KPIs
+        var activeClients = await _db.Clients
+            .Where(c => c.UserId == userId && c.IsActive && !c.CurrentStage.IsFinal)
+            .CountAsync(ct);
 
-        var monthlyStat = monthlyRows
-            .Select(r => new MonthlyStatDto(r.Year, r.Month, r.Proposals, r.Sales, r.Revenue))
-            .ToList();
+        var proposalsThisMonth = await _db.Proposals
+            .Where(p => p.UserId == userId && p.ProposalDate >= monthStart && p.ProposalDate < monthEnd)
+            .CountAsync(ct);
 
-        // 3. Loss reasons — PG function
-        var lossRows = await _db.Database
-            .SqlQuery<LossReasonRow>($"SELECT * FROM fn_get_loss_reasons({userId})")
-            .ToListAsync(ct);
+        var salesThisMonthQuery = _db.Sales
+            .Where(s => s.UserId == userId && s.SoldAt >= monthStart && s.SoldAt < monthEnd);
+        var salesThisMonth = await salesThisMonthQuery.CountAsync(ct);
+        var revenueThisMonth = await salesThisMonthQuery.SumAsync(s => (decimal?)s.FinalValue, ct) ?? 0m;
+        var commissionThisMonth = await salesThisMonthQuery.SumAsync(s => (decimal?)s.Commission, ct) ?? 0m;
 
-        var lossReasons = lossRows
-            .Select(r => new LossReasonStatDto(r.Reason, r.Count))
-            .ToList();
+        var overdueCount = await _db.Notifications
+            .Where(n => n.UserId == userId && n.Status == NotificationStatus.Pending && n.ScheduledFor < now)
+            .CountAsync(ct);
 
-        // 4. Hot deals — reuse fn_get_hot_deals (same function as ClientRepository)
-        var hotRows = await _db.Database
-            .SqlQuery<HotDealRow>($"SELECT * FROM fn_get_hot_deals({userId}, {5})")
-            .ToListAsync(ct);
-
-        var hotDeals = hotRows
-            .Select<HotDealRow, object>(r => new
-            {
-                id                = r.Id,
-                fullName          = r.FullName,
-                phone             = r.Phone,
-                stageName         = r.StageName,
-                stageColor        = r.StageColor,
-                lastInteractionAt = r.LastInteractionAt
-            })
-            .ToList();
-
-        var conversionRate = kpiRow.TotalProposalsThisMonth > 0
-            ? Math.Round((decimal)kpiRow.TotalSalesThisMonth / kpiRow.TotalProposalsThisMonth * 100m, 1)
+        var conversionRate = proposalsThisMonth > 0
+            ? Math.Round((decimal)salesThisMonth / proposalsThisMonth * 100m, 1)
             : 0m;
 
+        // 2. Monthly stats — last 6 months including the current one, zero-filled for months
+        // with no activity (mirrors the old fn_get_monthly_stats' month_series + LEFT JOIN).
+        const int months = 6;
+        var rangeStart = monthStart.AddMonths(-(months - 1));
+
+        var salesInRange = await _db.Sales
+            .Where(s => s.UserId == userId && s.SoldAt >= rangeStart)
+            .Select(s => new { s.SoldAt, s.FinalValue })
+            .ToListAsync(ct);
+
+        var proposalsInRange = await _db.Proposals
+            .Where(p => p.UserId == userId && p.ProposalDate >= rangeStart)
+            .Select(p => p.ProposalDate)
+            .ToListAsync(ct);
+
+        var monthlyStat = new List<MonthlyStatDto>();
+        for (var i = 0; i < months; i++)
+        {
+            var monthDate = rangeStart.AddMonths(i);
+            var salesForMonth = salesInRange.Where(s => s.SoldAt.Year == monthDate.Year && s.SoldAt.Month == monthDate.Month).ToList();
+            var proposalsForMonth = proposalsInRange.Count(p => p.HasValue && p.Value.Year == monthDate.Year && p.Value.Month == monthDate.Month);
+            monthlyStat.Add(new MonthlyStatDto(
+                monthDate.Year, monthDate.Month,
+                proposalsForMonth, salesForMonth.Count,
+                salesForMonth.Sum(s => s.FinalValue)));
+        }
+
+        // 3. Loss reasons
+        // GroupBy + projecting into a DTO, then ordering by the DTO's property, doesn't
+        // translate to SQL — materialize the grouped counts first, sort client-side.
+        var lossReasonCounts = await _db.Proposals
+            .Where(p => p.UserId == userId && p.Status == ProposalStatus.Lost && p.LossReason != null)
+            .GroupBy(p => p.LossReason!.Value)
+            .Select(g => new { Reason = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+        var lossReasons = lossReasonCounts
+            .OrderByDescending(r => r.Count)
+            .Select(r => new LossReasonStatDto((int)r.Reason, r.Count))
+            .ToList();
+
+        // 4. Hot deals (top 5) — same Hot/non-final-stage rule as ClientRepository.GetHotDealsAsync.
+        const int hot = 0; // DealTemperature.Hot
+        var hotDeals = await _db.Clients
+            .Where(c => c.UserId == userId && c.IsActive && (int)c.Temperature == hot && !c.CurrentStage.IsFinal)
+            .OrderByDescending(c => c.LastInteractionAt)
+            .Take(5)
+            .Select(c => new
+            {
+                id                = c.Id,
+                fullName          = c.FullName,
+                phone             = c.Phone,
+                stageName         = c.CurrentStage.Name,
+                stageColor        = c.CurrentStage.Color,
+                lastInteractionAt = c.LastInteractionAt,
+            })
+            .ToListAsync(ct);
+
         return new DashboardDto(
-            (int)kpiRow.TotalClientsActive,
-            (int)kpiRow.TotalProposalsThisMonth,
-            (int)kpiRow.TotalSalesThisMonth,
-            kpiRow.TotalRevenueThisMonth,
+            activeClients,
+            proposalsThisMonth,
+            salesThisMonth,
+            revenueThisMonth,
             conversionRate,
-            kpiRow.TotalCommissionThisMonth,
+            commissionThisMonth,
             monthlyStat,
             lossReasons,
             hotDeals,
-            (int)kpiRow.OverdueNotificationsCount);
+            overdueCount);
     }
 
     // ── Writes ────────────────────────────────────────────────────────────
     public void Add(Sale sale) => _db.Sales.Add(sale);
-
-    // ── Private result types ──────────────────────────────────────────────
-    private record DashboardKpiRow(
-        long TotalClientsActive,
-        long TotalProposalsThisMonth,
-        long TotalSalesThisMonth,
-        decimal TotalRevenueThisMonth,
-        decimal TotalCommissionThisMonth,
-        long OverdueNotificationsCount);
-
-    private record MonthlyStatRow(int Year, int Month, int Proposals, int Sales, decimal Revenue);
-
-    private record LossReasonRow(int Reason, int Count);
-
-    private record HotDealRow(
-        Guid Id, string FullName, string? Phone, string? Email,
-        int LeadSource, int Temperature,
-        Guid CurrentStageId, string StageName, string? StageColor,
-        DateTimeOffset? LastInteractionAt, DateTimeOffset CreatedAt);
 }

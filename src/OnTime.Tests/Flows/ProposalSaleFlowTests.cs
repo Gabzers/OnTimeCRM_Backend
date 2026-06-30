@@ -89,7 +89,7 @@ public class ProposalSaleFlowTests : IAsyncLifetime
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, auth.UserId);
 
         // ProposalVehicle.ModelId now points to the user's OWN catalog (UserVehicleModel), not
-        // the global VehicleModel — configure the Manager's own Filial to sell this brand first
+        // the global VehicleModel — configure the Manager's own Stand to sell this brand first
         // (Manager/Admin-only now, see USER-BRANDS.md), which lazily clones it into their catalog.
         var globalModel = await _factory.Db.VehicleModels
             .AsNoTracking()

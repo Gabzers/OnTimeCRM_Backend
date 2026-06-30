@@ -58,7 +58,7 @@ public class BrandsController : ControllerBase
         return NoContent();
     }
 
-    // ── Vehicle brands this Filial sells (see USER-BRANDS.md) ──────────────
+    // ── Vehicle brands this Stand sells (see USER-BRANDS.md) ──────────────
 
     [HttpGet("{id:guid}/vehicle-brands")]
     public async Task<IActionResult> GetVehicleBrands(Guid id, CancellationToken ct)

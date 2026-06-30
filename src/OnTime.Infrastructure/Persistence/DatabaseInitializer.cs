@@ -1,12 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using OnTime.Infrastructure.Persistence.Sql;
 
 namespace OnTime.Infrastructure.Persistence;
 
 /// <summary>
-/// Applies EnsureCreated and then creates/replaces all PostgreSQL functions
-/// at application startup.  Safe to call on every startup — all statements
-/// use CREATE OR REPLACE.
+/// Applies EnsureCreated at application startup. All query/aggregate logic lives in C#/EF Core
+/// now — see 04-DECISIONS/2026-05-30-data-layer.md for why the project moved away from raw
+/// PostgreSQL `fn_*` functions (no SQL function application step here anymore).
 ///
 /// Schema auto-recovery: if the DB already exists but is missing tables
 /// (e.g. new entities added after the DB was first created), the DB is
@@ -30,26 +29,6 @@ public static class DatabaseInitializer
                 await db.Database.EnsureCreatedAsync(ct);
             }
         }
-
-        // Drop all existing fn_* functions first so CREATE OR REPLACE can safely
-        // change return types (PostgreSQL 42P13 would block otherwise).
-        await db.Database.ExecuteSqlRawAsync("""
-            DO $$ DECLARE r RECORD;
-            BEGIN
-                FOR r IN
-                    SELECT p.proname, pg_get_function_identity_arguments(p.oid) AS argtypes
-                    FROM pg_proc p
-                    JOIN pg_namespace n ON n.oid = p.pronamespace
-                    WHERE n.nspname = 'public' AND p.prokind = 'f' AND p.proname LIKE 'fn_%'
-                LOOP
-                    EXECUTE 'DROP FUNCTION IF EXISTS public.' || quote_ident(r.proname) || '(' || r.argtypes || ') CASCADE';
-                END LOOP;
-            END $$;
-            """, ct);
-
-        // Apply all PostgreSQL functions
-        foreach (var sql in DatabaseFunctions.All)
-            await db.Database.ExecuteSqlRawAsync(sql, ct);
 
         // One-time data cleanup, safe to re-run every startup: "/admin" used to be seeded as a
         // per-company, per-role configurable menu permission (PermissionService.AllRoutes).

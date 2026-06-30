@@ -31,8 +31,8 @@ public class VehicleFlowTests : IAsyncLifetime
             "/api/vehicles/brands", new CreateVehicleBrandRequest($"TestBrand-{Guid.NewGuid():N}", null), auth.Token);
         var brand = await brandResp.Content.ReadFromJsonAsync<VehicleBrandDto>();
 
-        // Vehicle brands are now configured per-Filial by Manager/Admin (see USER-BRANDS.md) —
-        // allow it on the manager's own Filial before any model can be created under it.
+        // Vehicle brands are now configured per-Stand by Manager/Admin (see USER-BRANDS.md) —
+        // allow it on the manager's own Stand before any model can be created under it.
         await _factory.Client.PutAsJsonAsync(
             $"/api/brands/{auth.BrandId}/vehicle-brands",
             new OnTime.Application.DTOs.Brands.UpdateBrandVehicleBrandsRequest([brand!.Id]),

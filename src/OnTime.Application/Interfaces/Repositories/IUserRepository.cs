@@ -10,7 +10,7 @@ public interface IUserRepository
     Task<IEnumerable<UserListDto>> GetByBrandAsync(Guid brandId, CancellationToken ct = default);
     Task<User?> FindInBrandAsync(Guid userId, Guid brandId, CancellationToken ct = default);
 
-    /// <summary>True (default) unless the user's currently-active Filial has explicitly opted
+    /// <summary>True (default) unless the user's currently-active Stand has explicitly opted
     /// out of being an automotive account (see Brand.IsAutomotive / ROADMAP.md).</summary>
     Task<bool> IsAutomotiveAsync(Guid userId, CancellationToken ct = default);
 

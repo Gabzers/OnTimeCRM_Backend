@@ -12,7 +12,7 @@ namespace OnTime.Tests.Flows;
 
 /// <summary>
 /// "Not an automotive account" toggle (2026-06-29) — Brand.IsAutomotive, Manager/Admin-configured
-/// per Filial. UI-hide only: when false, the backend also stops requiring at least one vehicle on
+/// per Stand. UI-hide only: when false, the backend also stops requiring at least one vehicle on
 /// a new proposal (otherwise a non-automotive tenant could never create one through the normal
 /// flow once the UI vehicle picker is hidden). See ROADMAP.md.
 /// </summary>
@@ -34,6 +34,16 @@ public class AutomotiveAccountFlowTests : IAsyncLifetime
             CompanyName: "Test Co", BrandName: "Test Brand"));
         var login = await resp.Content.ReadFromJsonAsync<LoginResponseDto>();
         login!.IsAutomotive.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Register_CanSetIsAutomotiveFalse_AtSignup()
+    {
+        var resp = await _factory.Client.PostAsJsonAsync("/api/auth/register-manager", new RegisterManagerRequest(
+            FullName: "Test Manager", Email: $"{Guid.NewGuid():N}@example.com", Password: "Teste123!",
+            CompanyName: "Test Co", BrandName: "Test Brand", IsAutomotive: false));
+        var login = await resp.Content.ReadFromJsonAsync<LoginResponseDto>();
+        login!.IsAutomotive.ShouldBeFalse();
     }
 
     [Fact]

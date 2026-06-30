@@ -3,8 +3,8 @@ using OnTime.Domain.Common;
 namespace OnTime.Domain.Entities;
 
 /// <summary>
-/// A Filial (<see cref="Brand"/>) a user belongs to. <see cref="User.BrandId"/>/<see cref="User.CompanyId"/>
-/// stay the "currently active" Filial carried in the JWT (cid/bid claims) — this table is the full
+/// A Stand (<see cref="Brand"/>) a user belongs to. <see cref="User.BrandId"/>/<see cref="User.CompanyId"/>
+/// stay the "currently active" Stand carried in the JWT (cid/bid claims) — this table is the full
 /// set the user is allowed to switch into via POST /api/users/me/switch-brand. See ARCHITECTURE.md.
 /// </summary>
 public class UserBrandMembership : BaseEntity

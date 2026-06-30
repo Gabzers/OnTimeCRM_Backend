@@ -29,8 +29,8 @@ public sealed class VehicleRepository : IVehicleRepository
     {
         // A model only shows up while its VehicleBrand is currently configured for the calling
         // user's ACTIVE FILIAL (BrandVehicleBrand, Manager/Admin-managed) — not a per-user
-        // selection anymore. Unconfiguring a brand on the Filial hides its models for every user
-        // of that Filial without deleting anything (see USER-BRANDS.md). Independent of the
+        // selection anymore. Unconfiguring a brand on the Stand hides its models for every user
+        // of that Stand without deleting anything (see USER-BRANDS.md). Independent of the
         // model's own manual IsActive toggle (red/green status dot).
         var allowedBrandIds = await GetAllowedVehicleBrandIdsAsync(userId, ct);
         await EnsureClonedForBrandsAsync(userId, allowedBrandIds, ct);
@@ -109,7 +109,7 @@ public sealed class VehicleRepository : IVehicleRepository
         return allowed.Contains(vehicleBrandId);
     }
 
-    // ── Filial-level vehicle brand config + lazy clone (see USER-BRANDS.md) ─
+    // ── Stand-level vehicle brand config + lazy clone (see USER-BRANDS.md) ─
 
     private async Task<List<Guid>> GetAllowedVehicleBrandIdsAsync(Guid userId, CancellationToken ct)
     {
@@ -127,9 +127,9 @@ public sealed class VehicleRepository : IVehicleRepository
     }
 
     /// <summary>
-    /// The first time a user's Filial allows a VehicleBrand they haven't personally cloned yet,
+    /// The first time a user's Stand allows a VehicleBrand they haven't personally cloned yet,
     /// clone its global models/versions into their own catalog — same idempotent clone as before,
-    /// just triggered by the Filial's config instead of a per-user "select brand" action.
+    /// just triggered by the Stand's config instead of a per-user "select brand" action.
     /// </summary>
     private async Task EnsureClonedForBrandsAsync(Guid userId, IEnumerable<Guid> vehicleBrandIds, CancellationToken ct)
     {

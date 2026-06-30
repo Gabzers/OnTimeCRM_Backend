@@ -12,7 +12,7 @@ public class Brand : BaseEntity
     public string? Address { get; set; }
     public string? LogoUrl { get; set; }
     public string? PrimaryColor { get; set; }  // hex e.g. "#1C69D4"
-    /// <summary>False hides vehicle-related UI (Veículos, vehicle pickers) for this Filial's
+    /// <summary>False hides vehicle-related UI (Veículos, vehicle pickers) for this Stand's
     /// users — UI-hide only, no change to the underlying vehicle/proposal model. See ROADMAP.md.</summary>
     public bool IsAutomotive { get; set; } = true;
 

@@ -41,19 +41,19 @@ public sealed class NotificationRepository : INotificationRepository
         return new PagedResult<NotificationDto>(items, total, filter.Page, size);
     }
 
-    // ── Today's notifications via PG function ─────────────────────────────
+    // ── Today's notifications (pending + due, includes overdue) ───────────
     public async Task<IEnumerable<NotificationDto>> GetTodayAsync(
         Guid userId,
         CancellationToken ct = default)
     {
-        var rows = await _db.Database
-            .SqlQuery<TodayNotificationRow>($"SELECT * FROM fn_get_today_notifications({userId})")
+        var now = DateTimeOffset.UtcNow;
+        return await _db.Notifications
+            .AsNoTracking()
+            .Include(n => n.Client)
+            .Where(n => n.UserId == userId && n.Status == NotificationStatus.Pending && n.ScheduledFor <= now)
+            .OrderBy(n => n.ScheduledFor)
+            .Select(n => ToDto(n))
             .ToListAsync(ct);
-
-        return rows.Select(r => new NotificationDto(
-            r.Id, r.ClientId, r.ClientName, r.ProposalId, r.SaleId,
-            r.Trigger, r.Status, r.Title!, r.Body,
-            r.ScheduledFor, r.DoneAt, r.SnoozedUntil, r.CreatedAt));
     }
 
     // ── Overdue count ─────────────────────────────────────────────────────
@@ -80,14 +80,4 @@ public sealed class NotificationRepository : INotificationRepository
             (int)n.Trigger, (int)n.Status,
             n.Title, n.Body,
             n.ScheduledFor, n.DoneAt, n.SnoozedUntil, n.CreatedAt);
-
-    // ── Private result type ───────────────────────────────────────────────
-    private record TodayNotificationRow(
-        Guid Id, Guid? ClientId, string? ClientName,
-        Guid? ProposalId, Guid? SaleId,
-        int Trigger, int Status,
-        string? Title, string? Body,
-        DateTimeOffset ScheduledFor,
-        DateTimeOffset? DoneAt, DateTimeOffset? SnoozedUntil,
-        DateTimeOffset CreatedAt);
 }

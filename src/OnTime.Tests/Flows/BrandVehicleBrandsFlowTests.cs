@@ -13,10 +13,10 @@ using PagedResult = OnTime.Application.Common.PagedResult<OnTime.Application.DTO
 namespace OnTime.Tests.Flows;
 
 /// <summary>
-/// Flow 11 — Filial-level vehicle catalog (redesigned 2026-06-27, twice in the same sprint).
-/// Goal: which car brands a Filial sells is configured by Manager/Admin (BrandVehicleBrand), not
+/// Flow 11 — Stand-level vehicle catalog (redesigned 2026-06-27, twice in the same sprint).
+/// Goal: which car brands a Stand sells is configured by Manager/Admin (BrandVehicleBrand), not
 /// picked per-salesperson anymore. The personal catalog (UserVehicleModel/UserVehicleVersion)
-/// stays per-user — cloned lazily the first time a user's Filial allows a brand they haven't
+/// stays per-user — cloned lazily the first time a user's Stand allows a brand they haven't
 /// cloned yet. See USER-BRANDS.md.
 /// </summary>
 [Collection("Integration")]
@@ -29,10 +29,10 @@ public class BrandVehicleBrandsFlowTests : IAsyncLifetime
     public Task InitializeAsync() => _factory.ResetDatabaseAsync();
     public Task DisposeAsync() => Task.CompletedTask;
 
-    // ── Configuring the Filial's vehicle brands ─────────────────────────────
+    // ── Configuring the Stand's vehicle brands ─────────────────────────────
 
     [Fact]
-    public async Task GetVehicleBrands_NewFilial_ReturnsEmptyList()
+    public async Task GetVehicleBrands_NewStand_ReturnsEmptyList()
     {
         var manager = await TestHelpers.RegisterManagerAsync(_factory.Client);
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, manager.UserId);
@@ -102,7 +102,7 @@ public class BrandVehicleBrandsFlowTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DisallowingBrand_HidesModelsForEveryUserOfTheFilial_DoesNotDelete()
+    public async Task DisallowingBrand_HidesModelsForEveryUserOfTheStand_DoesNotDelete()
     {
         var manager = await TestHelpers.RegisterManagerAsync(_factory.Client);
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, manager.UserId);
@@ -113,7 +113,7 @@ public class BrandVehicleBrandsFlowTests : IAsyncLifetime
             new UpdateBrandVehicleBrandsRequest([brandA]), manager.Token);
         await _factory.Client.GetAsync("/api/vehicles/models", manager.Token); // triggers clone
 
-        // ACT — Filial no longer sells brandA
+        // ACT — Stand no longer sells brandA
         var putResp = await _factory.Client.PutAsJsonAsync(
             $"/api/brands/{manager.BrandId}/vehicle-brands",
             new UpdateBrandVehicleBrandsRequest([]), manager.Token);
@@ -155,7 +155,7 @@ public class BrandVehicleBrandsFlowTests : IAsyncLifetime
     // ── Manual model creation requires an allowed brand ─────────────────────
 
     [Fact]
-    public async Task CreateModel_ForBrandNotAllowedByFilial_IsRejected()
+    public async Task CreateModel_ForBrandNotAllowedByStand_IsRejected()
     {
         var manager = await TestHelpers.RegisterManagerAsync(_factory.Client);
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, manager.UserId);
@@ -188,10 +188,10 @@ public class BrandVehicleBrandsFlowTests : IAsyncLifetime
         resp.StatusCode.ShouldBe(HttpStatusCode.Created);
     }
 
-    // ── Tenant isolation across two different Filiais ───────────────────────
+    // ── Tenant isolation across two different Stands ───────────────────────
 
     [Fact]
-    public async Task TwoFiliais_AllowingSameBrand_GiveTheirUsersIndependentClones()
+    public async Task TwoStands_AllowingSameBrand_GiveTheirUsersIndependentClones()
     {
         var manager1 = await TestHelpers.RegisterManagerAsync(_factory.Client);
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, manager1.UserId);

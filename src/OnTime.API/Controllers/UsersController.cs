@@ -44,7 +44,7 @@ public class UsersController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>The Filiais (companies/brands) the calling user belongs to — see switch-brand.</summary>
+    /// <summary>The Stands (companies/brands) the calling user belongs to — see switch-brand.</summary>
     [HttpGet("me/memberships")]
     public async Task<IActionResult> GetMyMemberships(CancellationToken ct)
     {
@@ -52,7 +52,7 @@ public class UsersController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>Switches the calling user's active Filial (must already have membership) and
+    /// <summary>Switches the calling user's active Stand (must already have membership) and
     /// returns a freshly minted JWT scoped to it — same shape as login.</summary>
     [HttpPost("me/switch-brand")]
     public async Task<IActionResult> SwitchBrand(

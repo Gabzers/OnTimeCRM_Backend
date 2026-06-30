@@ -50,7 +50,7 @@ public record UpdateBrandRequest(
 
 public record SetBrandActiveRequest(bool IsActive);
 
-// ── Vehicle brands the Filial sells (Manager/Admin configured) ────────────────
+// ── Vehicle brands the Stand sells (Manager/Admin configured) ────────────────
 public record BrandVehicleBrandsDto(IEnumerable<Guid> VehicleBrandIds);
 public record UpdateBrandVehicleBrandsRequest(IEnumerable<Guid> VehicleBrandIds);
 

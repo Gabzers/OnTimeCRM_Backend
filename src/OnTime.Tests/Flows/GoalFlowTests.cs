@@ -267,6 +267,73 @@ public class GoalFlowTests : IAsyncLifetime
         ownerGoals!.Single(g => g.Goal.Id == goal.Id).Goal.TargetValue.ShouldBe(5m);
     }
 
+    // ── Conversion rate target range ────────────────────────────────────────
+
+    [Fact]
+    public async Task ConversionRateGoal_TargetOver100_Returns422()
+    {
+        var auth = await TestHelpers.RegisterManagerAsync(_factory.Client);
+        await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, auth.UserId);
+
+        var req = new CreateUserGoalRequest(
+            MetricType: (int)GoalMetricType.ConversionRate, Period: (int)GoalPeriod.Monthly,
+            TargetValue: 150m, StartDate: DateTimeOffset.UtcNow, EndDate: null);
+
+        var resp = await _factory.Client.PostAsJsonAsync("/api/goals", req, auth.Token);
+        resp.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        var body = await resp.Content.ReadAsStringAsync();
+        body.ShouldContain("GOAL_PERCENT_OUT_OF_RANGE");
+    }
+
+    [Fact]
+    public async Task ConversionRateGoal_UpdateOver100_Returns422()
+    {
+        var auth = await TestHelpers.RegisterManagerAsync(_factory.Client);
+        await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, auth.UserId);
+
+        var createResp = await _factory.Client.PostAsJsonAsync("/api/goals", new CreateUserGoalRequest(
+            MetricType: (int)GoalMetricType.ConversionRate, Period: (int)GoalPeriod.Monthly,
+            TargetValue: 50m, StartDate: DateTimeOffset.UtcNow, EndDate: null), auth.Token);
+        var created = await createResp.Content.ReadFromJsonAsync<UserGoalDto>();
+
+        var updateResp = await _factory.Client.PutAsJsonAsync(
+            $"/api/goals/{created!.Id}",
+            new UpdateUserGoalRequest(TargetValue: 101m, StartDate: created.StartDate, EndDate: null),
+            auth.Token);
+        updateResp.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+    }
+
+    // ── Reorder ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Goals_Reorder_ChangesListingOrder()
+    {
+        var auth = await TestHelpers.RegisterManagerAsync(_factory.Client);
+        await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, auth.UserId);
+
+        async Task<Guid> CreateAsync(decimal target) =>
+            (await (await _factory.Client.PostAsJsonAsync("/api/goals", new CreateUserGoalRequest(
+                MetricType: (int)GoalMetricType.Sales, Period: (int)GoalPeriod.Monthly,
+                TargetValue: target, StartDate: DateTimeOffset.UtcNow, EndDate: null), auth.Token))
+                .Content.ReadFromJsonAsync<UserGoalDto>())!.Id;
+
+        var first = await CreateAsync(1m);
+        var second = await CreateAsync(2m);
+        var third = await CreateAsync(3m);
+
+        // New goals are created at the end — confirm the natural creation order first.
+        var initial = await _factory.Client.GetFromJsonAsync<List<GoalProgressDto>>("/api/goals", auth.Token);
+        initial!.Select(g => g.Goal.Id).ShouldBe([first, second, third]);
+
+        // Move the third goal to the front.
+        var reorderResp = await _factory.Client.PutAsJsonAsync(
+            "/api/goals/reorder", new ReorderGoalsRequest([third, first, second]), auth.Token);
+        reorderResp.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var reordered = await _factory.Client.GetFromJsonAsync<List<GoalProgressDto>>("/api/goals", auth.Token);
+        reordered!.Select(g => g.Goal.Id).ShouldBe([third, first, second]);
+    }
+
     // ── Test 4 ───────────────────────────────────────────────────────────────
 
     [Fact]

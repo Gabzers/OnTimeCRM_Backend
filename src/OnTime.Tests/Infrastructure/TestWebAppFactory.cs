@@ -9,7 +9,6 @@ using Testcontainers.PostgreSql;
 using WireMock.Server;
 using OnTime.Domain.Entities;
 using OnTime.Infrastructure.Persistence;
-using OnTime.Infrastructure.Persistence.Sql;
 
 namespace OnTime.Tests.Infrastructure;
 

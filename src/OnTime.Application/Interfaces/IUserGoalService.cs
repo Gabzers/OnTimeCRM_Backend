@@ -8,4 +8,5 @@ public interface IUserGoalService
     Task<UserGoalDto> CreateGoalAsync(Guid userId, CreateUserGoalRequest request, CancellationToken ct = default);
     Task<UserGoalDto> UpdateGoalAsync(Guid userId, Guid goalId, UpdateUserGoalRequest request, CancellationToken ct = default);
     Task DeleteGoalAsync(Guid userId, Guid goalId, CancellationToken ct = default);
+    Task ReorderGoalsAsync(Guid userId, ReorderGoalsRequest request, CancellationToken ct = default);
 }

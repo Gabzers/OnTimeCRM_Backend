@@ -42,4 +42,11 @@ public class UserGoalsController : ControllerBase
         await _goals.DeleteGoalAsync(User.GetUserId(), id, ct);
         return NoContent();
     }
+
+    [HttpPut("reorder")]
+    public async Task<IActionResult> Reorder([FromBody] ReorderGoalsRequest request, CancellationToken ct)
+    {
+        await _goals.ReorderGoalsAsync(User.GetUserId(), request, ct);
+        return NoContent();
+    }
 }

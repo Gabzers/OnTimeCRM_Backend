@@ -50,7 +50,8 @@ public class AuthService : IAuthService
                     Company      = company,
                     Name         = req.BrandName,
                     PrimaryColor = req.BrandColor ?? "#1677FF",
-                    IsActive     = true
+                    IsActive     = true,
+                    IsAutomotive = req.IsAutomotive
                 };
                 _repo.AddBrand(brand);
             }

@@ -10,7 +10,8 @@ public record UserGoalDto(
     DateTimeOffset StartDate,
     DateTimeOffset? EndDate,
     bool ShowOnDashboard,
-    DateTimeOffset CreatedAt
+    DateTimeOffset CreatedAt,
+    int SortOrder
 );
 
 public record GoalProgressDto(
@@ -33,4 +34,8 @@ public record UpdateUserGoalRequest(
     [Required] DateTimeOffset StartDate,
     DateTimeOffset? EndDate,
     bool ShowOnDashboard = false
+);
+
+public record ReorderGoalsRequest(
+    [Required] IReadOnlyList<Guid> OrderedIds
 );
