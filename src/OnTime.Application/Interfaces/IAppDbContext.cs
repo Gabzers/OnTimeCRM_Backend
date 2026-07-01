@@ -31,6 +31,7 @@ public interface IAppDbContext
     DbSet<UserGoal> UserGoals { get; }
     DbSet<MenuItemPermission> MenuItemPermissions { get; }
     DbSet<ErrorLog> ErrorLogs { get; }
+    DbSet<EmailLog> EmailLogs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     DatabaseFacade Database { get; }

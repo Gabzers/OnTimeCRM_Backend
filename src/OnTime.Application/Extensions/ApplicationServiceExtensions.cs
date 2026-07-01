@@ -25,6 +25,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IFriendshipService, FriendshipService>();
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<IErrorLogService, ErrorLogService>();
+        services.AddScoped<IEmailLogService, EmailLogService>();
         services.AddScoped<IUserGoalService, UserGoalService>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<ILeadSourceService, LeadSourceService>();

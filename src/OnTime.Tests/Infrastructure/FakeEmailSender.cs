@@ -7,15 +7,15 @@ namespace OnTime.Tests.Infrastructure;
 /// the network, so tests can assert on subject/body/language without any external dependency.</summary>
 public sealed class FakeEmailSender : IEmailSender
 {
-    public sealed record SentEmail(string ToEmail, string ToName, string Subject, string HtmlBody);
+    public sealed record SentEmail(string ToEmail, string ToName, string Subject, string HtmlBody, string EmailType);
 
     private readonly ConcurrentBag<SentEmail> _sent = new();
 
     public IReadOnlyCollection<SentEmail> Sent => _sent.ToList();
 
-    public Task SendAsync(string toEmail, string toName, string subject, string htmlBody, CancellationToken ct = default)
+    public Task SendAsync(string toEmail, string toName, string subject, string htmlBody, string emailType, CancellationToken ct = default)
     {
-        _sent.Add(new SentEmail(toEmail, toName, subject, htmlBody));
+        _sent.Add(new SentEmail(toEmail, toName, subject, htmlBody, emailType));
         return Task.CompletedTask;
     }
 

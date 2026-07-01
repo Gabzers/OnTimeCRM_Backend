@@ -155,7 +155,7 @@ public class ScheduledJobsService : IScheduledJobsService
 
             var subject = EmailTemplates.DigestSubject(pref.User.Locale);
             var html = EmailTemplates.DigestBody(pref.User.Locale, pref.User.FullName, pending.Select(n => n.Title).ToList());
-            await _emailSender.SendAsync(pref.User.Email, pref.User.FullName, subject, html, ct);
+            await _emailSender.SendAsync(pref.User.Email, pref.User.FullName, subject, html, "Digest", ct);
             pref.LastDigestSentAt = now;
             sent++;
         }
@@ -260,7 +260,7 @@ public class ScheduledJobsService : IScheduledJobsService
             var subject = EmailTemplates.BusinessSummarySubject(pref.User.Locale, pref.BusinessSummaryFrequency);
             var html = EmailTemplates.BusinessSummaryBody(
                 pref.User.Locale, pref.User.FullName, periodStart, periodEnd, counts, stageBreakdown, goalLines);
-            await _emailSender.SendAsync(pref.User.Email, pref.User.FullName, subject, html, ct);
+            await _emailSender.SendAsync(pref.User.Email, pref.User.FullName, subject, html, "BusinessSummary", ct);
             pref.LastBusinessSummarySentAt = now;
             sent++;
         }

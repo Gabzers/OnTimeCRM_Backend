@@ -81,7 +81,7 @@ public class FriendshipService : IFriendshipService
         var subject = EmailTemplates.FriendRequestSubject(receiver.Locale);
         var html = EmailTemplates.FriendRequestBody(receiver.Locale, receiver.FullName, senderName);
 
-        await _emailSender.SendAsync(receiver.Email, receiver.FullName, subject, html, ct);
+        await _emailSender.SendAsync(receiver.Email, receiver.FullName, subject, html, "FriendRequest", ct);
     }
 
     public Task<IEnumerable<FriendSearchResultDto>> SearchUsersAsync(

@@ -37,6 +37,7 @@ public class AppDbContext : DbContext, IAppDbContext, IUnitOfWork
     public DbSet<UserBrandMembership> UserBrandMemberships => Set<UserBrandMembership>();
     public DbSet<BrandVehicleBrand> BrandVehicleBrands => Set<BrandVehicleBrand>();
     public DbSet<ErrorLog> ErrorLogs => Set<ErrorLog>();
+    public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
     public DbSet<LeadSourceOption> LeadSourceOptions => Set<LeadSourceOption>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
