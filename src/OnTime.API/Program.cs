@@ -165,7 +165,7 @@ static async Task InitializeDatabaseAsync(WebApplication app)
 
     try
     {
-        await DatabaseInitializer.InitializeAsync(db);
+        await DatabaseInitializer.InitializeAsync(db, app.Environment.IsProduction());
 
         // Seed global vehicle brands (shared across all tenants)
         await SeedVehicleBrandsAsync(db);
@@ -279,6 +279,10 @@ static void SeedAdminDefaults(AppDbContext db, User user)
         StageChangeNotificationsEnabled = true,
         SaleNotificationsEnabled        = true
     });
+
+    var leadSourceNames = new[] { "Stand", "Telefone", "Instagram", "Facebook", "Recomendação", "Outro" };
+    for (var code = 0; code < leadSourceNames.Length; code++)
+        db.LeadSourceOptions.Add(new LeadSourceOption { User = user, Code = code, Name = leadSourceNames[code] });
 }
 
 // Make Program partial for test accessibility

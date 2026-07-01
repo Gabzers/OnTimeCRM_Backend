@@ -16,7 +16,8 @@ public record UserDto(
     Guid? BrandId,
     string BrandName,
     DateTimeOffset? LastLoginAt,
-    DateTimeOffset CreatedAt
+    DateTimeOffset CreatedAt,
+    string Locale
 );
 
 public record UserListDto(
@@ -32,7 +33,8 @@ public record UserListDto(
 public record UpdateUserRequest(
     string? FullName,
     string? Phone,
-    [EmailAddress] string? Email = null
+    [EmailAddress] string? Email = null,
+    string? Locale = null
 );
 
 public record SetUserActiveRequest(bool IsActive);

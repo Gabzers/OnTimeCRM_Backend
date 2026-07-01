@@ -88,16 +88,13 @@ public sealed class ClientRepository : IClientRepository
         Guid userId,
         CancellationToken ct = default)
     {
-        const int limit = 10;
-        const int hot = 0; // DealTemperature.Hot
-
         return await _db.Clients
             .AsNoTracking()
             .Include(c => c.CurrentStage)
-            .Where(c => c.UserId == userId && c.IsActive
-                && (int)c.Temperature == hot && !c.CurrentStage.IsFinal)
-            .OrderByDescending(c => c.LastInteractionAt)
-            .Take(limit)
+            .Where(c => c.UserId == userId && c.IsActive && !c.CurrentStage.IsFinal)
+            .OrderBy(c => c.Temperature)     // 0=Hot first, 1=Warm, 2=Cold
+            .ThenByDescending(c => c.LastInteractionAt)
+            .Take(20)
             .Select(c => new ClientListDto(
                 c.Id, c.FullName, c.Phone, c.Email,
                 c.LeadSource, (int)c.Temperature,
@@ -152,4 +149,10 @@ public sealed class ClientRepository : IClientRepository
     public void AddProposalVehicle(ProposalVehicle pv) => _db.ProposalVehicles.Add(pv);
     public void AddHistory(ClientStageHistory history) => _db.ClientStageHistories.Add(history);
     public void AddNotification(Notification notification) => _db.Notifications.Add(notification);
+    public void AddNotificationSeries(ClientStageNotificationSeries series) => _db.ClientStageNotificationSeries.Add(series);
+
+    public Task DeactivateActiveNotificationSeriesAsync(Guid clientId, CancellationToken ct = default) =>
+        _db.ClientStageNotificationSeries
+            .Where(s => s.IsActive && s.ClientStageHistory.ClientId == clientId)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsActive, false), ct);
 }

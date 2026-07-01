@@ -17,6 +17,6 @@ public class UserGoalConfiguration : IEntityTypeConfiguration<UserGoal>
                .HasForeignKey(g => g.UserId)
                .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(g => new { g.UserId, g.MetricType, g.StartDate });
+        builder.HasIndex(g => new { g.UserId, g.MetricType });
     }
 }

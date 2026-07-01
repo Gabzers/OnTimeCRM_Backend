@@ -38,7 +38,9 @@ public class ClientStageService : IClientStageService
             IsFinal = req.IsFinal || req.IsWon || req.IsLost,
             IsWon   = req.IsWon,
             IsLost  = req.IsLost,
-            IsActive = true
+            IsActive = true,
+            AffectsTemperature = req.AffectsTemperature,
+            NotificationsEnabled = req.NotificationsEnabled
         };
 
         _repo.Add(stage);
@@ -82,6 +84,8 @@ public class ClientStageService : IClientStageService
         stage.IsWon    = req.IsWon;
         stage.IsLost   = req.IsLost;
         stage.IsFinal  = req.IsFinal || req.IsWon || req.IsLost;
+        stage.AffectsTemperature = req.AffectsTemperature;
+        stage.NotificationsEnabled = req.NotificationsEnabled;
 
         // Only one stage can be the Won stage, and only one the Lost stage — demote the
         // previous holder so ConvertToSale/MarkLost always have a single, unambiguous target.
@@ -141,6 +145,9 @@ public class ClientStageService : IClientStageService
         if (stage.UserId != userId)
             throw new ApiException(ApiErrorCatalog.STAGE_WRONG_USER);
 
+        if (req.FixedDayOfWeek.HasValue && req.FixedDayOfMonth.HasValue)
+            throw new ApiException(ApiErrorCatalog.RECURRENCE_FIXED_DAY_CONFLICT);
+
         var template = new StageNotificationTemplate
         {
             StageId   = stageId,
@@ -148,7 +155,13 @@ public class ClientStageService : IClientStageService
             DaysAfter = req.DaysAfter,
             IsEnabled = true,
             TimeOfDay = req.TimeOfDay,
-            OverridesNewClientNotification = req.OverridesNewClientNotification
+            OverridesNewClientNotification = req.OverridesNewClientNotification,
+            IsRecurring = req.IsRecurring,
+            RecurrenceIntervalDays = req.RecurrenceIntervalDays,
+            FixedDayOfWeek = req.FixedDayOfWeek,
+            FixedDayOfMonth = req.FixedDayOfMonth,
+            MaxOccurrences = req.MaxOccurrences,
+            SendEmail = req.SendEmail
         };
 
         _repo.AddTemplate(template);
@@ -169,11 +182,20 @@ public class ClientStageService : IClientStageService
         var template = await _repo.FindTemplateAsync(stageId, templateId, ct)
             ?? throw new ApiException(ApiErrorCatalog.NOTIFICATION_NOT_FOUND);
 
+        if (req.FixedDayOfWeek.HasValue && req.FixedDayOfMonth.HasValue)
+            throw new ApiException(ApiErrorCatalog.RECURRENCE_FIXED_DAY_CONFLICT);
+
         template.Title     = req.Title;
         template.DaysAfter = req.DaysAfter;
         template.IsEnabled = req.IsEnabled;
         template.TimeOfDay = req.TimeOfDay;
         template.OverridesNewClientNotification = req.OverridesNewClientNotification;
+        template.IsRecurring = req.IsRecurring;
+        template.RecurrenceIntervalDays = req.RecurrenceIntervalDays;
+        template.FixedDayOfWeek = req.FixedDayOfWeek;
+        template.FixedDayOfMonth = req.FixedDayOfMonth;
+        template.MaxOccurrences = req.MaxOccurrences;
+        template.SendEmail = req.SendEmail;
 
         await _uow.SaveChangesAsync(ct);
         return ToTemplateDto(template);
@@ -195,10 +217,75 @@ public class ClientStageService : IClientStageService
         await _uow.SaveChangesAsync(ct);
     }
 
+    public async Task<TemperatureRuleDto> AddTemperatureRuleAsync(
+        Guid stageId, Guid userId, CreateTemperatureRuleRequest req, CancellationToken ct = default)
+    {
+        var stage = await _repo.FindAsync(stageId, ct)
+            ?? throw new ApiException(ApiErrorCatalog.STAGE_NOT_FOUND);
+
+        if (stage.UserId != userId)
+            throw new ApiException(ApiErrorCatalog.STAGE_WRONG_USER);
+
+        var rule = new ClientStageTemperatureRule
+        {
+            StageId = stageId,
+            DaysAfterEntry = req.DaysAfterEntry,
+            Temperature = req.Temperature
+        };
+
+        _repo.AddTemperatureRule(rule);
+        await _uow.SaveChangesAsync(ct);
+
+        return ToTemperatureRuleDto(rule);
+    }
+
+    public async Task<TemperatureRuleDto> UpdateTemperatureRuleAsync(
+        Guid stageId, Guid ruleId, Guid userId, UpdateTemperatureRuleRequest req, CancellationToken ct = default)
+    {
+        var stage = await _repo.FindAsync(stageId, ct)
+            ?? throw new ApiException(ApiErrorCatalog.STAGE_NOT_FOUND);
+
+        if (stage.UserId != userId)
+            throw new ApiException(ApiErrorCatalog.STAGE_WRONG_USER);
+
+        var rule = await _repo.FindTemperatureRuleAsync(stageId, ruleId, ct)
+            ?? throw new ApiException(ApiErrorCatalog.TEMPERATURE_RULE_NOT_FOUND);
+
+        rule.DaysAfterEntry = req.DaysAfterEntry;
+        rule.Temperature = req.Temperature;
+
+        await _uow.SaveChangesAsync(ct);
+        return ToTemperatureRuleDto(rule);
+    }
+
+    public async Task DeleteTemperatureRuleAsync(
+        Guid stageId, Guid ruleId, Guid userId, CancellationToken ct = default)
+    {
+        var stage = await _repo.FindAsync(stageId, ct)
+            ?? throw new ApiException(ApiErrorCatalog.STAGE_NOT_FOUND);
+
+        if (stage.UserId != userId)
+            throw new ApiException(ApiErrorCatalog.STAGE_WRONG_USER);
+
+        var rule = await _repo.FindTemperatureRuleAsync(stageId, ruleId, ct)
+            ?? throw new ApiException(ApiErrorCatalog.TEMPERATURE_RULE_NOT_FOUND);
+
+        _repo.RemoveTemperatureRule(rule);
+        await _uow.SaveChangesAsync(ct);
+    }
+
     private static ClientStageDto ToDto(ClientStage s) =>
         new(s.Id, s.Name, s.Color, s.Order, s.IsFinal, s.IsWon, s.IsLost, s.IsActive,
-            (s.Templates ?? Enumerable.Empty<StageNotificationTemplate>()).Select(ToTemplateDto));
+            s.AffectsTemperature, s.NotificationsEnabled,
+            (s.Templates ?? Enumerable.Empty<StageNotificationTemplate>()).Select(ToTemplateDto),
+            (s.TemperatureRules ?? Enumerable.Empty<ClientStageTemperatureRule>())
+                .OrderBy(r => r.DaysAfterEntry).Select(ToTemperatureRuleDto));
 
     private static StageTemplateDto ToTemplateDto(StageNotificationTemplate t) =>
-        new(t.Id, t.Title, t.DaysAfter, t.IsEnabled, t.TimeOfDay, t.OverridesNewClientNotification);
+        new(t.Id, t.Title, t.DaysAfter, t.IsEnabled, t.TimeOfDay, t.OverridesNewClientNotification,
+            t.IsRecurring, t.RecurrenceIntervalDays, t.FixedDayOfWeek, t.FixedDayOfMonth, t.MaxOccurrences,
+            t.SendEmail);
+
+    private static TemperatureRuleDto ToTemperatureRuleDto(ClientStageTemperatureRule r) =>
+        new(r.Id, r.DaysAfterEntry, r.Temperature);
 }

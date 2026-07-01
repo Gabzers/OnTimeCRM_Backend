@@ -16,6 +16,8 @@ public class User : BaseEntity
     public UserRole Role { get; set; } = UserRole.Salesperson;
     public bool IsEmailVerified { get; set; } = false;
     public DateTimeOffset? LastLoginAt { get; set; }
+    /// <summary>UI language, e.g. "pt-PT"/"en-US" — drives email template language server-side.</summary>
+    public string Locale { get; set; } = "pt-PT";
 
     // Subscription / account
     public UserAccountStatus AccountStatus { get; set; } = UserAccountStatus.PendingActivation;

@@ -11,11 +11,19 @@ public class FriendshipService : IFriendshipService
 {
     private readonly IFriendshipRepository _repo;
     private readonly IUnitOfWork           _uow;
+    private readonly INotificationPreferenceRepository _prefRepo;
+    private readonly IEmailSender          _emailSender;
 
-    public FriendshipService(IFriendshipRepository repo, IUnitOfWork uow)
+    public FriendshipService(
+        IFriendshipRepository repo,
+        IUnitOfWork uow,
+        INotificationPreferenceRepository prefRepo,
+        IEmailSender emailSender)
     {
-        _repo = repo;
-        _uow  = uow;
+        _repo        = repo;
+        _uow         = uow;
+        _prefRepo    = prefRepo;
+        _emailSender = emailSender;
     }
 
     public async Task<FriendRequestDto> SendRequestAsync(
@@ -56,11 +64,24 @@ public class FriendshipService : IFriendshipService
         await _uow.SaveChangesAsync(ct);
 
         var sender = await _repo.FindUserByIdAsync(senderId, ct);
+        await NotifyFriendRequestAsync(receiver, sender?.FullName ?? string.Empty, ct);
+
         return new FriendRequestDto(
             friendship.Id, senderId,
             sender?.FullName ?? string.Empty,
             sender?.Email ?? string.Empty,
             friendship.CreatedAt);
+    }
+
+    private async Task NotifyFriendRequestAsync(User receiver, string senderName, CancellationToken ct)
+    {
+        var pref = await _prefRepo.FindByUserAsync(receiver.Id, ct);
+        if (pref is not null && !pref.EmailOnFriendRequests) return;
+
+        var subject = EmailTemplates.FriendRequestSubject(receiver.Locale);
+        var html = EmailTemplates.FriendRequestBody(receiver.Locale, receiver.FullName, senderName);
+
+        await _emailSender.SendAsync(receiver.Email, receiver.FullName, subject, html, ct);
     }
 
     public Task<IEnumerable<FriendSearchResultDto>> SearchUsersAsync(

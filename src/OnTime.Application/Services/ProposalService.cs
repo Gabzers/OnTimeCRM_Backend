@@ -153,6 +153,8 @@ public class ProposalService : IProposalService
 
             p.Client.CurrentStageId    = lostStage.Id;
             p.Client.LastInteractionAt = DateTimeOffset.UtcNow;
+
+            await _clientRepo.DeactivateActiveNotificationSeriesAsync(p.ClientId, ct);
         }
 
         await _uow.SaveChangesAsync(ct);
@@ -225,6 +227,8 @@ public class ProposalService : IProposalService
 
             p.Client.CurrentStageId    = wonStage.Id;
             p.Client.LastInteractionAt = DateTimeOffset.UtcNow;
+
+            await _clientRepo.DeactivateActiveNotificationSeriesAsync(p.ClientId, ct);
 
             // 4. Schedule post-sale notification from preference
             var pref         = await _prefRepo.GetByUserAsync(userId, ct);

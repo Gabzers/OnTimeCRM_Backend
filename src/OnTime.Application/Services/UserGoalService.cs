@@ -4,6 +4,7 @@ using OnTime.Application.DTOs.Goals;
 using OnTime.Application.Interfaces;
 using OnTime.Domain.Entities;
 using OnTime.Domain.Enums;
+using OnTime.Domain.Services;
 
 namespace OnTime.Application.Services;
 
@@ -41,51 +42,11 @@ public class UserGoalService : IUserGoalService
         return results;
     }
 
-    /// <summary>
-    /// Computes progress from the goal's own date range — never a fixed "this month" snapshot,
-    /// so Daily/Weekly/Annual goals (and goals with a custom EndDate) get a value that actually
-    /// matches their period instead of always reading whatever the calendar month looks like.
-    /// </summary>
     private async Task<decimal> ComputeCurrentValueAsync(UserGoal g, Guid userId, CancellationToken ct)
     {
-        var start = g.StartDate;
-        var end   = g.EndDate ?? PeriodEnd(g.Period, g.StartDate);
-
-        switch (g.MetricType)
-        {
-            case GoalMetricType.Sales:
-                return await _db.Sales.CountAsync(s =>
-                    s.UserId == userId && s.SoldAt >= start && s.SoldAt < end, ct);
-
-            case GoalMetricType.Proposals:
-                return await _db.Proposals.CountAsync(p =>
-                    p.UserId == userId && p.ProposalDate >= start && p.ProposalDate < end, ct);
-
-            case GoalMetricType.NewClients:
-                return await _db.Clients.CountAsync(c =>
-                    c.UserId == userId && c.CreatedAt >= start && c.CreatedAt < end, ct);
-
-            case GoalMetricType.ConversionRate:
-                var proposalsInRange = await _db.Proposals.CountAsync(p =>
-                    p.UserId == userId && p.ProposalDate >= start && p.ProposalDate < end, ct);
-                if (proposalsInRange == 0) return 0m;
-                var salesInRange = await _db.Sales.CountAsync(s =>
-                    s.UserId == userId && s.SoldAt >= start && s.SoldAt < end, ct);
-                return Math.Round((decimal)salesInRange / proposalsInRange * 100m, 1);
-
-            default:
-                return 0m;
-        }
+        var (start, end) = GoalPeriodCalculator.Window(g.Period, DateTimeOffset.UtcNow);
+        return await GoalProgressCalculator.ComputeValueAsync(_db, userId, g.MetricType, start, end, ct);
     }
-
-    private static DateTimeOffset PeriodEnd(GoalPeriod period, DateTimeOffset start) => period switch
-    {
-        GoalPeriod.Daily   => start.AddDays(1),
-        GoalPeriod.Weekly  => start.AddDays(7),
-        GoalPeriod.Monthly => start.AddMonths(1),
-        GoalPeriod.Annual  => start.AddYears(1),
-        _                  => start.AddMonths(1)
-    };
 
     public async Task<UserGoalDto> CreateGoalAsync(Guid userId, CreateUserGoalRequest request, CancellationToken ct = default)
     {
@@ -99,14 +60,12 @@ public class UserGoalService : IUserGoalService
 
         var goal = new UserGoal
         {
-            UserId      = userId,
-            MetricType  = (GoalMetricType)request.MetricType,
-            Period      = (GoalPeriod)request.Period,
-            TargetValue = request.TargetValue,
-            StartDate   = request.StartDate,
-            EndDate     = request.EndDate,
+            UserId          = userId,
+            MetricType      = (GoalMetricType)request.MetricType,
+            Period          = (GoalPeriod)request.Period,
+            TargetValue     = request.TargetValue,
             ShowOnDashboard = request.ShowOnDashboard,
-            SortOrder   = (maxOrder ?? -1) + 1,
+            SortOrder       = (maxOrder ?? -1) + 1,
         };
 
         _db.UserGoals.Add(goal);
@@ -138,8 +97,6 @@ public class UserGoalService : IUserGoalService
             throw new ApiException(ApiErrorCatalog.GOAL_PERCENT_OUT_OF_RANGE);
 
         goal.TargetValue     = request.TargetValue;
-        goal.StartDate       = request.StartDate;
-        goal.EndDate         = request.EndDate;
         goal.ShowOnDashboard = request.ShowOnDashboard;
         await _uow.SaveChangesAsync(ct);
         return ToDto(goal);
@@ -152,8 +109,6 @@ public class UserGoalService : IUserGoalService
         await _uow.SaveChangesAsync(ct);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
     private async Task<UserGoal> FindOwnedAsync(Guid userId, Guid goalId, CancellationToken ct)
     {
         var goal = await _db.UserGoals.FirstOrDefaultAsync(g => g.Id == goalId, ct);
@@ -165,5 +120,5 @@ public class UserGoalService : IUserGoalService
     }
 
     private static UserGoalDto ToDto(UserGoal g) =>
-        new(g.Id, (int)g.MetricType, (int)g.Period, g.TargetValue, g.StartDate, g.EndDate, g.ShowOnDashboard, g.CreatedAt, g.SortOrder);
+        new(g.Id, (int)g.MetricType, (int)g.Period, g.TargetValue, g.ShowOnDashboard, g.CreatedAt, g.SortOrder);
 }

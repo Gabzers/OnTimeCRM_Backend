@@ -156,7 +156,7 @@ public class ClientService : IClientService
         var activeProposal = client.Proposals
             .FirstOrDefault(p => p.Status == ProposalStatus.Active);
 
-        _clientRepo.AddHistory(new ClientStageHistory
+        var history = new ClientStageHistory
         {
             ClientId         = client.Id,
             UserId           = userId,
@@ -164,16 +164,34 @@ public class ClientService : IClientService
             ToStageId        = newStage.Id,
             Obs              = req.Obs,
             ProposalSnapshot = BuildSnapshot(activeProposal)
-        });
+        };
+        _clientRepo.AddHistory(history);
+
+        // Any recurring-notification series from the client's previous stage visit stops
+        // unconditionally on stage change, regardless of occurrence count or Done state.
+        await _clientRepo.DeactivateActiveNotificationSeriesAsync(client.Id, ct);
 
         client.CurrentStageId    = newStage.Id;
         client.LastInteractionAt = DateTimeOffset.UtcNow;
         client.CurrentStage      = newStage;
 
-        if (!newStage.IsFinal)
+        if (newStage.AffectsTemperature)
+        {
+            // Apply this stage's immediate (DaysAfterEntry = 0) rule, if any. Later time-based
+            // transitions for this stage are applied by the pg_cron job, not here.
+            var immediateRule = newStage.TemperatureRules?
+                .Where(r => r.DaysAfterEntry == 0)
+                .OrderByDescending(r => r.DaysAfterEntry)
+                .FirstOrDefault();
+            if (immediateRule is not null)
+                client.Temperature = (DealTemperature)immediateRule.Temperature;
+        }
+        else if (!newStage.IsFinal)
+        {
             client.Temperature = RecalcTemperature(client.LastInteractionAt);
+        }
 
-        GenerateFromTemplates(userId, client.Id, activeProposal?.Id, newStage);
+        GenerateFromTemplates(userId, client.Id, activeProposal?.Id, newStage, history);
 
         await _uow.SaveChangesAsync(ct);
         return ToDto(client);
@@ -344,7 +362,7 @@ public class ClientService : IClientService
     }
 
     private void GenerateFromTemplates(
-        Guid userId, Guid clientId, Guid? proposalId, ClientStage stage)
+        Guid userId, Guid clientId, Guid? proposalId, ClientStage stage, ClientStageHistory history)
     {
         if (stage.Templates is null) return;
 
@@ -361,6 +379,20 @@ public class ClientService : IClientService
                 Title        = t.Title,
                 ScheduledFor = now.AddDays(t.DaysAfter)
             });
+
+            // Recurring templates also get a series row tracking this stage visit's progress —
+            // the first occurrence above already counts as #1; the pg_cron job generates #2+.
+            if (t.IsRecurring)
+            {
+                _clientRepo.AddNotificationSeries(new ClientStageNotificationSeries
+                {
+                    ClientStageHistoryId = history.Id,
+                    TemplateId           = t.Id,
+                    OccurrenceCount       = 1,
+                    IsActive              = true,
+                    LastFiredAt           = now
+                });
+            }
         }
     }
 

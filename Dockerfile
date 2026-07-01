@@ -24,7 +24,10 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 EXPOSE 8080
-ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
-
-ENTRYPOINT ["dotnet", "OnTime.API.dll"]
+# Cloud Run injects $PORT (defaults to 8080) and requires the container to listen on it —
+# resolve ASPNETCORE_URLS from that at container start instead of hardcoding, so this same image
+# works unchanged on Cloud Run, Render, or plain docker-compose (where $PORT is unset, so it falls
+# back to 8080 exactly like before).
+ENV PORT=8080
+ENTRYPOINT ["/bin/sh", "-c", "ASPNETCORE_URLS=http://+:$PORT dotnet OnTime.API.dll"]

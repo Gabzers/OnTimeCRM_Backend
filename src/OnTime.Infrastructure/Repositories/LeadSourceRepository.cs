@@ -11,21 +11,21 @@ public sealed class LeadSourceRepository : ILeadSourceRepository
 
     public LeadSourceRepository(AppDbContext db) => _db = db;
 
-    public async Task<IEnumerable<LeadSourceOption>> GetByCompanyAsync(
-        Guid companyId, CancellationToken ct = default) =>
+    public async Task<IEnumerable<LeadSourceOption>> GetByUserAsync(
+        Guid userId, CancellationToken ct = default) =>
         await _db.LeadSourceOptions
             .AsNoTracking()
-            .Where(x => x.CompanyId == companyId)
+            .Where(x => x.UserId == userId)
             .OrderBy(x => x.Code)
             .ToListAsync(ct);
 
     public async Task<LeadSourceOption?> FindAsync(Guid id, CancellationToken ct = default) =>
         await _db.LeadSourceOptions.FindAsync(new object[] { id }, ct);
 
-    public async Task<int> GetNextCodeAsync(Guid companyId, CancellationToken ct = default)
+    public async Task<int> GetNextCodeAsync(Guid userId, CancellationToken ct = default)
     {
         var max = await _db.LeadSourceOptions
-            .Where(x => x.CompanyId == companyId)
+            .Where(x => x.UserId == userId)
             .Select(x => (int?)x.Code)
             .MaxAsync(ct);
         return (max ?? -1) + 1;

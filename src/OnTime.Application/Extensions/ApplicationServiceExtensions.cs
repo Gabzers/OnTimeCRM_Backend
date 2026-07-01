@@ -28,6 +28,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IUserGoalService, UserGoalService>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<ILeadSourceService, LeadSourceService>();
+        services.AddScoped<IScheduledJobsService, ScheduledJobsService>();
 
         return services;
     }

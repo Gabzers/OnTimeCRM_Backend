@@ -39,6 +39,9 @@ public interface IClientStageService
     Task<StageTemplateDto> AddTemplateAsync(Guid stageId, Guid userId, CreateStageTemplateRequest request, CancellationToken ct = default);
     Task<StageTemplateDto> UpdateTemplateAsync(Guid stageId, Guid templateId, Guid userId, UpdateStageTemplateRequest request, CancellationToken ct = default);
     Task DeleteTemplateAsync(Guid stageId, Guid templateId, Guid userId, CancellationToken ct = default);
+    Task<TemperatureRuleDto> AddTemperatureRuleAsync(Guid stageId, Guid userId, CreateTemperatureRuleRequest request, CancellationToken ct = default);
+    Task<TemperatureRuleDto> UpdateTemperatureRuleAsync(Guid stageId, Guid ruleId, Guid userId, UpdateTemperatureRuleRequest request, CancellationToken ct = default);
+    Task DeleteTemperatureRuleAsync(Guid stageId, Guid ruleId, Guid userId, CancellationToken ct = default);
 }
 
 public interface IVehicleService

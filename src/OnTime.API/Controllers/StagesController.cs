@@ -91,4 +91,37 @@ public class StagesController : ControllerBase
         await _stages.DeleteTemplateAsync(stageId, templateId, User.GetUserId(), ct);
         return NoContent();
     }
+
+    // ── Stage temperature rules ─────────────────────────────────────────────
+
+    [HttpPost("{stageId:guid}/temperature-rules")]
+    public async Task<IActionResult> AddTemperatureRule(
+        Guid stageId,
+        [FromBody] CreateTemperatureRuleRequest request,
+        CancellationToken ct)
+    {
+        var result = await _stages.AddTemperatureRuleAsync(stageId, User.GetUserId(), request, ct);
+        return Ok(result);
+    }
+
+    [HttpPut("{stageId:guid}/temperature-rules/{ruleId:guid}")]
+    public async Task<IActionResult> UpdateTemperatureRule(
+        Guid stageId,
+        Guid ruleId,
+        [FromBody] UpdateTemperatureRuleRequest request,
+        CancellationToken ct)
+    {
+        var result = await _stages.UpdateTemperatureRuleAsync(stageId, ruleId, User.GetUserId(), request, ct);
+        return Ok(result);
+    }
+
+    [HttpDelete("{stageId:guid}/temperature-rules/{ruleId:guid}")]
+    public async Task<IActionResult> DeleteTemperatureRule(
+        Guid stageId,
+        Guid ruleId,
+        CancellationToken ct)
+    {
+        await _stages.DeleteTemperatureRuleAsync(stageId, ruleId, User.GetUserId(), ct);
+        return NoContent();
+    }
 }

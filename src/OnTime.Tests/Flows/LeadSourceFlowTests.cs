@@ -7,8 +7,8 @@ using OnTime.Tests.Infrastructure;
 namespace OnTime.Tests.Flows;
 
 /// <summary>
-/// Lead Source maintenance (2026-06-29) — LeadSource is now company-configurable data
-/// (LeadSourceOption) instead of a fixed backend enum. See ROADMAP.md.
+/// Lead Source maintenance — LeadSourceOption is per-user (not per-company).
+/// Each registered user gets 6 default lead sources seeded on registration.
 /// </summary>
 [Collection("Integration")]
 public class LeadSourceFlowTests : IAsyncLifetime
@@ -21,7 +21,7 @@ public class LeadSourceFlowTests : IAsyncLifetime
     public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
-    public async Task NewCompany_GetsEightDefaultLeadSources()
+    public async Task NewUser_GetsSixDefaultLeadSources()
     {
         var manager = await TestHelpers.RegisterManagerAsync(_factory.Client);
 
@@ -29,13 +29,13 @@ public class LeadSourceFlowTests : IAsyncLifetime
         resp.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var list = await resp.Content.ReadFromJsonAsync<List<LeadSourceOptionDto>>();
-        list!.Count.ShouldBe(8);
-        list.Select(x => x.Code).ShouldBe(Enumerable.Range(0, 8), ignoreOrder: true);
+        list!.Count.ShouldBe(6);
+        list.Select(x => x.Code).ShouldBe(Enumerable.Range(0, 6), ignoreOrder: true);
         list.ShouldAllBe(x => x.IsActive);
     }
 
     [Fact]
-    public async Task Manager_CanCreateRenameAndDeactivate()
+    public async Task AnyUser_CanCreateRenameAndDeactivate()
     {
         var manager = await TestHelpers.RegisterManagerAsync(_factory.Client);
 
@@ -43,7 +43,7 @@ public class LeadSourceFlowTests : IAsyncLifetime
             "/api/lead-sources", new CreateLeadSourceRequest("Google Ads"), manager.Token);
         createResp.StatusCode.ShouldBe(HttpStatusCode.Created);
         var created = await createResp.Content.ReadFromJsonAsync<LeadSourceOptionDto>();
-        created!.Code.ShouldBe(8); // next after the 8 seeded defaults (0-7)
+        created!.Code.ShouldBe(6); // next after the 6 seeded defaults (0-5)
 
         var updateResp = await _factory.Client.PutAsJsonAsync(
             $"/api/lead-sources/{created.Id}", new UpdateLeadSourceRequest("Google Ads (Search)"), manager.Token);
@@ -61,31 +61,35 @@ public class LeadSourceFlowTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Salesperson_CanReadButNotWrite()
+    public async Task Salesperson_HasOwnLeadSourcesAndCanWrite()
     {
         var manager = await TestHelpers.RegisterManagerAsync(_factory.Client);
         var sales = await TestHelpers.RegisterSalespersonAsync(_factory.Client, manager.CompanyId!.Value, manager.BrandId!.Value);
 
+        // Salesperson gets their own 6 defaults
         var listResp = await _factory.Client.GetAsync("/api/lead-sources", sales.Token);
         listResp.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var list = await listResp.Content.ReadFromJsonAsync<List<LeadSourceOptionDto>>();
+        list!.Count.ShouldBe(6);
 
+        // Salesperson can create their own lead source
         var createResp = await _factory.Client.PostAsJsonAsync(
-            "/api/lead-sources", new CreateLeadSourceRequest("Tentativa"), sales.Token);
-        createResp.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+            "/api/lead-sources", new CreateLeadSourceRequest("OLX"), sales.Token);
+        createResp.StatusCode.ShouldBe(HttpStatusCode.Created);
     }
 
     [Fact]
-    public async Task Manager_CannotEditAnotherCompanysLeadSource()
+    public async Task User_CannotEditAnotherUsersLeadSource()
     {
-        var managerA = await TestHelpers.RegisterManagerAsync(_factory.Client);
-        var managerB = await TestHelpers.RegisterManagerAsync(_factory.Client);
+        var userA = await TestHelpers.RegisterManagerAsync(_factory.Client);
+        var userB = await TestHelpers.RegisterManagerAsync(_factory.Client);
 
-        var listResp = await _factory.Client.GetAsync("/api/lead-sources", managerA.Token);
+        var listResp = await _factory.Client.GetAsync("/api/lead-sources", userA.Token);
         var listA = await listResp.Content.ReadFromJsonAsync<List<LeadSourceOptionDto>>();
         var optionFromA = listA!.First();
 
         var resp = await _factory.Client.PutAsJsonAsync(
-            $"/api/lead-sources/{optionFromA.Id}", new UpdateLeadSourceRequest("Hijacked"), managerB.Token);
+            $"/api/lead-sources/{optionFromA.Id}", new UpdateLeadSourceRequest("Hijacked"), userB.Token);
         resp.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 }

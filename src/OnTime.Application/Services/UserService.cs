@@ -35,6 +35,7 @@ public class UserService : IUserService
 
         if (req.FullName is not null) user.FullName = req.FullName;
         if (req.Phone    is not null) user.Phone    = req.Phone;
+        if (req.Locale   is not null) user.Locale   = req.Locale;
 
         if (req.Email is not null && !req.Email.Equals(user.Email, StringComparison.OrdinalIgnoreCase))
         {
@@ -88,5 +89,5 @@ public class UserService : IUserService
             (int)u.Role, (int)u.AccountStatus, (int)u.SubscriptionStatus,
             u.CompanyId, u.Company?.Name ?? string.Empty,
             u.BrandId,   u.Brand?.Name   ?? string.Empty,
-            u.LastLoginAt, u.CreatedAt);
+            u.LastLoginAt, u.CreatedAt, u.Locale);
 }

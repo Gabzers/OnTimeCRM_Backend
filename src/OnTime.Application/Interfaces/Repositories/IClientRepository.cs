@@ -37,4 +37,9 @@ public interface IClientRepository
     void AddProposalVehicle(ProposalVehicle vehicle);
     void AddHistory(ClientStageHistory history);
     void AddNotification(Notification notification);
+    void AddNotificationSeries(ClientStageNotificationSeries series);
+
+    /// <summary>Stops any still-active recurring-notification series left over from this client's
+    /// previous stage visit — called unconditionally on every stage change.</summary>
+    Task DeactivateActiveNotificationSeriesAsync(Guid clientId, CancellationToken ct = default);
 }

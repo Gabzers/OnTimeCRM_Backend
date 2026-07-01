@@ -30,6 +30,9 @@ public class TestWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
     // Shared HTTP client (call CreateClient() only once per factory lifetime)
     public HttpClient Client { get; private set; } = default!;
 
+    // In-memory stand-in for Brevo — lets tests assert on sent emails without any network call.
+    public FakeEmailSender EmailSender { get; private set; } = default!;
+
     public string WireMockBaseUrl => _wireMock.Url!;
 
     async Task IAsyncLifetime.InitializeAsync()
@@ -56,6 +59,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
         var scope = Services.CreateScope();
         Db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await DatabaseInitializer.InitializeAsync(Db);
+        EmailSender = (FakeEmailSender)scope.ServiceProvider.GetRequiredService<OnTime.Application.Interfaces.IEmailSender>();
 
         // 5. Configure Respawn (cleans data between tests without dropping schema)
         _respawnConnection = new NpgsqlConnection(_postgres.GetConnectionString());
@@ -75,6 +79,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public async Task ResetDatabaseAsync()
     {
         await _respawner.ResetAsync(_respawnConnection);
+        EmailSender.Clear();
 
         // vehicle_brands is excluded from Respawn (global seed data), but vehicle_models is not,
         // so it gets wiped every reset — reseed brands+models the first time, models-only after.
@@ -130,6 +135,10 @@ public class TestWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
             services.AddScoped<OnTime.Application.Interfaces.IAppDbContext>(
                 sp => sp.GetRequiredService<AppDbContext>());
+
+            // Replace the real Brevo HTTP sender with an in-memory fake — no network calls in tests.
+            services.RemoveAll<OnTime.Application.Interfaces.IEmailSender>();
+            services.AddSingleton<OnTime.Application.Interfaces.IEmailSender, FakeEmailSender>();
         });
 
         builder.UseSetting("ConnectionStrings:DefaultConnection", _postgres?.GetConnectionString() ?? "");
@@ -148,6 +157,7 @@ public class TestWebAppFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Ifthenpay:MultibancoKey", "MB_TEST_KEY");
         builder.UseSetting("Ifthenpay:Entity", "11111");
         builder.UseSetting("Ifthenpay:CallbackSecretKey", "callback_test_secret");
+        builder.UseSetting("InternalJobs:SecretKey", "test-internal-jobs-secret");
 
         // The whole suite shares one TestServer/IP through this factory, so the production
         // login rate limit (5/min) would trip across unrelated tests. Raise it here instead of

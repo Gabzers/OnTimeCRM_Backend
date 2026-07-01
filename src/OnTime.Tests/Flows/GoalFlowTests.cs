@@ -12,7 +12,7 @@ namespace OnTime.Tests.Flows;
 
 /// <summary>
 /// Flow 8 — Goals (Objectives)
-/// Goal: CRUD for user goals; progress calculation reflects real KPI data.
+/// Goal: CRUD for user goals; progress is always the current calendar period (no custom date range).
 /// </summary>
 [Collection("Integration")]
 public class GoalFlowTests : IAsyncLifetime
@@ -32,13 +32,10 @@ public class GoalFlowTests : IAsyncLifetime
         var auth = await TestHelpers.RegisterManagerAsync(_factory.Client);
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, auth.UserId);
 
-        // Create a Sales goal for this month
         var req = new CreateUserGoalRequest(
             MetricType: (int)GoalMetricType.Sales,
             Period: (int)GoalPeriod.Monthly,
-            TargetValue: 5m,
-            StartDate: new DateTimeOffset(DateTimeOffset.UtcNow.Year, DateTimeOffset.UtcNow.Month, 1, 0, 0, 0, TimeSpan.Zero),
-            EndDate: null
+            TargetValue: 5m
         );
 
         var createResp = await _factory.Client.PostAsJsonAsync("/api/goals", req, auth.Token);
@@ -50,7 +47,6 @@ public class GoalFlowTests : IAsyncLifetime
         created.Period.ShouldBe((int)GoalPeriod.Monthly);
         created.TargetValue.ShouldBe(5m);
 
-        // List goals — should show 1 with 0 progress
         var listResp = await _factory.Client.GetAsync("/api/goals", auth.Token);
         listResp.StatusCode.ShouldBe(HttpStatusCode.OK);
 
@@ -70,19 +66,14 @@ public class GoalFlowTests : IAsyncLifetime
         var auth = await TestHelpers.RegisterManagerAsync(_factory.Client);
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, auth.UserId);
 
-        // Create goal: 3 sales this month
-        var startOfMonth = new DateTimeOffset(DateTimeOffset.UtcNow.Year, DateTimeOffset.UtcNow.Month, 1, 0, 0, 0, TimeSpan.Zero);
         var req = new CreateUserGoalRequest(
             MetricType: (int)GoalMetricType.Sales,
             Period: (int)GoalPeriod.Monthly,
-            TargetValue: 3m,
-            StartDate: startOfMonth,
-            EndDate: null
+            TargetValue: 3m
         );
         var createResp = await _factory.Client.PostAsJsonAsync("/api/goals", req, auth.Token);
         createResp.StatusCode.ShouldBe(HttpStatusCode.Created);
 
-        // Make 2 sales
         var (_, p1Id) = await TestHelpers.CreateClientWithProposalAsync(_factory.Client, auth.Token, db: _factory.Db);
         var (_, p2Id) = await TestHelpers.CreateClientWithProposalAsync(_factory.Client, auth.Token, db: _factory.Db);
 
@@ -94,7 +85,6 @@ public class GoalFlowTests : IAsyncLifetime
         await _factory.Client.PostAsJsonAsync($"/api/proposals/{p1Id}/convert", saleReq, auth.Token);
         await _factory.Client.PostAsJsonAsync($"/api/proposals/{p2Id}/convert", saleReq, auth.Token);
 
-        // Check goal progress
         var listResp = await _factory.Client.GetAsync("/api/goals", auth.Token);
         listResp.StatusCode.ShouldBe(HttpStatusCode.OK);
 
@@ -114,35 +104,24 @@ public class GoalFlowTests : IAsyncLifetime
         var auth = await TestHelpers.RegisterManagerAsync(_factory.Client);
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, auth.UserId);
 
-        // Create goal
         var req = new CreateUserGoalRequest(
             MetricType: (int)GoalMetricType.NewClients,
             Period: (int)GoalPeriod.Weekly,
-            TargetValue: 7m,
-            StartDate: DateTimeOffset.UtcNow,
-            EndDate: null
+            TargetValue: 7m
         );
         var createResp = await _factory.Client.PostAsJsonAsync("/api/goals", req, auth.Token);
         var created = await createResp.Content.ReadFromJsonAsync<UserGoalDto>();
         created.ShouldNotBeNull();
 
-        // Update: change target value
-        var updateReq = new UpdateUserGoalRequest(
-            TargetValue: 10m,
-            StartDate: created!.StartDate,
-            EndDate: DateTimeOffset.UtcNow.AddDays(7)
-        );
-        var updateResp = await _factory.Client.PutAsJsonAsync($"/api/goals/{created.Id}", updateReq, auth.Token);
+        var updateReq = new UpdateUserGoalRequest(TargetValue: 10m);
+        var updateResp = await _factory.Client.PutAsJsonAsync($"/api/goals/{created!.Id}", updateReq, auth.Token);
         updateResp.StatusCode.ShouldBe(HttpStatusCode.OK);
         var updated = await updateResp.Content.ReadFromJsonAsync<UserGoalDto>();
         updated!.TargetValue.ShouldBe(10m);
-        updated.EndDate.ShouldNotBeNull();
 
-        // Delete
         var deleteResp = await _factory.Client.DeleteAsync($"/api/goals/{created.Id}", auth.Token);
         deleteResp.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
-        // Verify gone
         var listResp = await _factory.Client.GetAsync("/api/goals", auth.Token);
         var list = await listResp.Content.ReadFromJsonAsync<List<GoalProgressDto>>();
         list!.Count.ShouldBe(0);
@@ -151,33 +130,29 @@ public class GoalFlowTests : IAsyncLifetime
     // ── Test 5 ───────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Goals_WeeklyGoal_OnlyCountsSalesInsideItsOwnWindow_NotTheWholeMonth()
+    public async Task Goals_WeeklyGoal_OnlyCountsSalesInCurrentWeek()
     {
         var auth = await TestHelpers.RegisterManagerAsync(_factory.Client);
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, auth.UserId);
 
-        // A weekly goal starting today — its window is [today, today+7d).
-        var todayUtc = new DateTimeOffset(DateTimeOffset.UtcNow.Date, TimeSpan.Zero);
         var req = new CreateUserGoalRequest(
             MetricType: (int)GoalMetricType.Sales,
             Period: (int)GoalPeriod.Weekly,
-            TargetValue: 10m,
-            StartDate: todayUtc,
-            EndDate: null
+            TargetValue: 10m
         );
         var createResp = await _factory.Client.PostAsJsonAsync("/api/goals", req, auth.Token);
         createResp.StatusCode.ShouldBe(HttpStatusCode.Created);
 
-        // One sale inside the week, backdated 10 days (still this calendar month) — must NOT count.
+        // A sale backdated 14 days (last week) must NOT count.
         var (_, oldProposalId) = await TestHelpers.CreateClientWithProposalAsync(_factory.Client, auth.Token, db: _factory.Db);
         var oldSaleReq = new ConvertToSaleRequest(
-            SoldAt: DateTimeOffset.UtcNow.AddDays(-10), FinalValue: 15000m,
+            SoldAt: DateTimeOffset.UtcNow.AddDays(-14), FinalValue: 15000m,
             PaymentType: (int)PaymentType.Cash, ModelId: null, FreeTextModel: "Car",
             Plate: null, Chassis: null, Obs: null
         );
         await _factory.Client.PostAsJsonAsync($"/api/proposals/{oldProposalId}/convert", oldSaleReq, auth.Token);
 
-        // One sale inside the week — must count.
+        // A sale made today must count.
         var (_, newProposalId) = await TestHelpers.CreateClientWithProposalAsync(_factory.Client, auth.Token, db: _factory.Db);
         var newSaleReq = new ConvertToSaleRequest(
             SoldAt: DateTimeOffset.UtcNow, FinalValue: 15000m,
@@ -188,9 +163,6 @@ public class GoalFlowTests : IAsyncLifetime
 
         var listResp = await _factory.Client.GetAsync("/api/goals", auth.Token);
         var list = await listResp.Content.ReadFromJsonAsync<List<GoalProgressDto>>();
-
-        // Only the in-window sale counts — proves progress is scoped to the goal's own dates,
-        // not a blanket "this calendar month" snapshot shared by every period.
         list![0].CurrentValue.ShouldBe(1m);
     }
 
@@ -202,13 +174,10 @@ public class GoalFlowTests : IAsyncLifetime
         var auth = await TestHelpers.RegisterManagerAsync(_factory.Client);
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, auth.UserId);
 
-        var startOfYear = new DateTimeOffset(DateTimeOffset.UtcNow.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
         var req = new CreateUserGoalRequest(
             MetricType: (int)GoalMetricType.Sales,
             Period: (int)GoalPeriod.Annual,
             TargetValue: 50m,
-            StartDate: startOfYear,
-            EndDate: null,
             ShowOnDashboard: true
         );
 
@@ -218,7 +187,6 @@ public class GoalFlowTests : IAsyncLifetime
         created!.Period.ShouldBe((int)GoalPeriod.Annual);
         created.ShowOnDashboard.ShouldBeTrue();
 
-        // A sale made today (within the year) must count toward the annual goal.
         var (_, proposalId) = await TestHelpers.CreateClientWithProposalAsync(_factory.Client, auth.Token, db: _factory.Db);
         var saleReq = new ConvertToSaleRequest(
             SoldAt: DateTimeOffset.UtcNow, FinalValue: 15000m,
@@ -246,28 +214,25 @@ public class GoalFlowTests : IAsyncLifetime
         var createReq = new CreateUserGoalRequest(
             MetricType: (int)GoalMetricType.Sales,
             Period: (int)GoalPeriod.Monthly,
-            TargetValue: 5m,
-            StartDate: DateTimeOffset.UtcNow,
-            EndDate: null
+            TargetValue: 5m
         );
         var createResp = await _factory.Client.PostAsJsonAsync("/api/goals", createReq, owner.Token);
         var goal = await createResp.Content.ReadFromJsonAsync<UserGoalDto>();
 
         var updateResp = await _factory.Client.PutAsJsonAsync(
             $"/api/goals/{goal!.Id}",
-            new UpdateUserGoalRequest(TargetValue: 999m, StartDate: goal.StartDate, EndDate: null),
+            new UpdateUserGoalRequest(TargetValue: 999m),
             stranger.Token);
         updateResp.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 
         var deleteResp = await _factory.Client.DeleteAsync($"/api/goals/{goal.Id}", stranger.Token);
         deleteResp.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 
-        // Confirm it's untouched — the owner still sees their original target value.
         var ownerGoals = await _factory.Client.GetFromJsonAsync<List<GoalProgressDto>>("/api/goals", owner.Token);
         ownerGoals!.Single(g => g.Goal.Id == goal.Id).Goal.TargetValue.ShouldBe(5m);
     }
 
-    // ── Conversion rate target range ────────────────────────────────────────
+    // ── Conversion rate target range ──────────────────────────────────────────
 
     [Fact]
     public async Task ConversionRateGoal_TargetOver100_Returns422()
@@ -277,7 +242,7 @@ public class GoalFlowTests : IAsyncLifetime
 
         var req = new CreateUserGoalRequest(
             MetricType: (int)GoalMetricType.ConversionRate, Period: (int)GoalPeriod.Monthly,
-            TargetValue: 150m, StartDate: DateTimeOffset.UtcNow, EndDate: null);
+            TargetValue: 150m);
 
         var resp = await _factory.Client.PostAsJsonAsync("/api/goals", req, auth.Token);
         resp.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
@@ -293,17 +258,17 @@ public class GoalFlowTests : IAsyncLifetime
 
         var createResp = await _factory.Client.PostAsJsonAsync("/api/goals", new CreateUserGoalRequest(
             MetricType: (int)GoalMetricType.ConversionRate, Period: (int)GoalPeriod.Monthly,
-            TargetValue: 50m, StartDate: DateTimeOffset.UtcNow, EndDate: null), auth.Token);
+            TargetValue: 50m), auth.Token);
         var created = await createResp.Content.ReadFromJsonAsync<UserGoalDto>();
 
         var updateResp = await _factory.Client.PutAsJsonAsync(
             $"/api/goals/{created!.Id}",
-            new UpdateUserGoalRequest(TargetValue: 101m, StartDate: created.StartDate, EndDate: null),
+            new UpdateUserGoalRequest(TargetValue: 101m),
             auth.Token);
         updateResp.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
     }
 
-    // ── Reorder ──────────────────────────────────────────────────────────────
+    // ── Reorder ───────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Goals_Reorder_ChangesListingOrder()
@@ -314,18 +279,16 @@ public class GoalFlowTests : IAsyncLifetime
         async Task<Guid> CreateAsync(decimal target) =>
             (await (await _factory.Client.PostAsJsonAsync("/api/goals", new CreateUserGoalRequest(
                 MetricType: (int)GoalMetricType.Sales, Period: (int)GoalPeriod.Monthly,
-                TargetValue: target, StartDate: DateTimeOffset.UtcNow, EndDate: null), auth.Token))
+                TargetValue: target), auth.Token))
                 .Content.ReadFromJsonAsync<UserGoalDto>())!.Id;
 
         var first = await CreateAsync(1m);
         var second = await CreateAsync(2m);
         var third = await CreateAsync(3m);
 
-        // New goals are created at the end — confirm the natural creation order first.
         var initial = await _factory.Client.GetFromJsonAsync<List<GoalProgressDto>>("/api/goals", auth.Token);
         initial!.Select(g => g.Goal.Id).ShouldBe([first, second, third]);
 
-        // Move the third goal to the front.
         var reorderResp = await _factory.Client.PutAsJsonAsync(
             "/api/goals/reorder", new ReorderGoalsRequest([third, first, second]), auth.Token);
         reorderResp.StatusCode.ShouldBe(HttpStatusCode.NoContent);
@@ -334,7 +297,7 @@ public class GoalFlowTests : IAsyncLifetime
         reordered!.Select(g => g.Goal.Id).ShouldBe([third, first, second]);
     }
 
-    // ── Test 4 ───────────────────────────────────────────────────────────────
+    // ── Permissions ───────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Permissions_GetByRole_ReturnsSeedDefaults()
@@ -342,17 +305,14 @@ public class GoalFlowTests : IAsyncLifetime
         var auth = await TestHelpers.RegisterManagerAsync(_factory.Client);
         await TestHelpers.ActivateSubscriptionDirectAsync(_factory.Db, auth.UserId);
 
-        // Manager should get all permissions seeded
         var managerResp = await _factory.Client.GetAsync("/api/permissions?role=1", auth.Token);
         managerResp.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var managerPerms = await managerResp.Content.ReadFromJsonAsync<List<MenuPermissionDto>>();
         managerPerms.ShouldNotBeNull();
         managerPerms!.Count.ShouldBeGreaterThan(0);
-        // Managers have all permissions
         managerPerms.All(p => p.CanView).ShouldBeTrue();
 
-        // Salesperson — should also be seeded
         var salesResp = await _factory.Client.GetAsync("/api/permissions?role=0", auth.Token);
         salesResp.StatusCode.ShouldBe(HttpStatusCode.OK);
         var salesPerms = await salesResp.Content.ReadFromJsonAsync<List<MenuPermissionDto>>();

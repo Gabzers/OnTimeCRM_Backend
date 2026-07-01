@@ -31,6 +31,8 @@ public static class ApiErrorCatalog
     public static readonly ApiError STAGE_HAS_CLIENTS            = new("STAGE_HAS_CLIENTS",            "Stage has active clients. Move them before deleting.", "UnprocessableEntity", 422);
     public static readonly ApiError STAGE_WRONG_USER             = new("STAGE_WRONG_USER",             "Stage does not belong to you.",          "Forbidden",   403);
     public static readonly ApiError STAGE_WON_AND_LOST           = new("STAGE_WON_AND_LOST",           "A stage cannot be both Won and Lost.",   "UnprocessableEntity", 422);
+    public static readonly ApiError TEMPERATURE_RULE_NOT_FOUND   = new("TEMPERATURE_RULE_NOT_FOUND",   "Temperature rule not found.",            "NotFound",    404);
+    public static readonly ApiError RECURRENCE_FIXED_DAY_CONFLICT = new("RECURRENCE_FIXED_DAY_CONFLICT", "A recurring template cannot set both a fixed weekday and a fixed day-of-month.", "UnprocessableEntity", 422);
 
     // ── Vehicle ───────────────────────────────────────────────────────────────
     public static readonly ApiError VEHICLE_BRAND_NOT_FOUND      = new("VEHICLE_BRAND_NOT_FOUND",      "Vehicle brand not found.",               "NotFound",    404);
@@ -69,5 +71,5 @@ public static class ApiErrorCatalog
 
     // ── Lead Source ──────────────────────────────────────────────────────────
     public static readonly ApiError LEAD_SOURCE_NOT_FOUND        = new("LEAD_SOURCE_NOT_FOUND",        "Lead source not found.",                 "NotFound",    404);
-    public static readonly ApiError LEAD_SOURCE_WRONG_COMPANY    = new("LEAD_SOURCE_WRONG_COMPANY",    "Lead source does not belong to this company.", "Forbidden", 403);
+    public static readonly ApiError LEAD_SOURCE_WRONG_USER       = new("LEAD_SOURCE_WRONG_USER",       "Lead source does not belong to this user.", "Forbidden", 403);
 }

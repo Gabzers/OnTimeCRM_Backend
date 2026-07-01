@@ -40,21 +40,39 @@ public record NotificationFilterParams(
 public record NotificationPreferenceDto(
     string DailyDigestTime,   // "HH:mm"
     int DigestFrequencyDays,
+    int DigestDaysOfWeek,
     int SaleFollowUpDays,
     bool DigestEnabled,
     bool StageChangeNotificationsEnabled,
     bool SaleNotificationsEnabled,
     int? NewClientNotificationDaysAfter,
-    string? NewClientNotificationTime
+    string? NewClientNotificationTime,
+    bool EmailOnFriendRequests,
+    bool EmailOnGeneralNotifications,
+    bool BusinessSummaryEnabled,
+    int BusinessSummaryFrequency,
+    int BusinessSummaryDayOfWeek,
+    bool BusinessSummaryIncludeCounts,
+    bool BusinessSummaryIncludeStageSummary,
+    bool BusinessSummaryIncludeGoals
 );
 
 public record UpdateNotificationPreferenceRequest(
     string? DailyDigestTime,
     int? DigestFrequencyDays,
+    int? DigestDaysOfWeek,
     int? SaleFollowUpDays,
     bool? DigestEnabled,
     bool? StageChangeNotificationsEnabled,
     bool? SaleNotificationsEnabled,
     int? NewClientNotificationDaysAfter = null,
-    string? NewClientNotificationTime = null
+    string? NewClientNotificationTime = null,
+    bool? EmailOnFriendRequests = null,
+    bool? EmailOnGeneralNotifications = null,
+    bool? BusinessSummaryEnabled = null,
+    int? BusinessSummaryFrequency = null,
+    int? BusinessSummaryDayOfWeek = null,
+    bool? BusinessSummaryIncludeCounts = null,
+    bool? BusinessSummaryIncludeStageSummary = null,
+    bool? BusinessSummaryIncludeGoals = null
 );

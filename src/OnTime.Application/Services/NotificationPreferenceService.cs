@@ -2,6 +2,7 @@
 using OnTime.Application.DTOs.Notifications;
 using OnTime.Application.Interfaces;
 using OnTime.Application.Interfaces.Repositories;
+using OnTime.Domain.Enums;
 
 namespace OnTime.Application.Services;
 
@@ -37,6 +38,9 @@ public class NotificationPreferenceService : INotificationPreferenceService
         if (req.DigestFrequencyDays.HasValue)
             pref.DigestFrequencyDays = req.DigestFrequencyDays.Value;
 
+        if (req.DigestDaysOfWeek.HasValue)
+            pref.DigestDaysOfWeek = req.DigestDaysOfWeek.Value;
+
         if (req.SaleFollowUpDays.HasValue)
             pref.SaleFollowUpDays = req.SaleFollowUpDays.Value;
 
@@ -61,16 +65,49 @@ public class NotificationPreferenceService : INotificationPreferenceService
             pref.DailyDigestTime = t;
         }
 
+        if (req.EmailOnFriendRequests.HasValue)
+            pref.EmailOnFriendRequests = req.EmailOnFriendRequests.Value;
+
+        if (req.EmailOnGeneralNotifications.HasValue)
+            pref.EmailOnGeneralNotifications = req.EmailOnGeneralNotifications.Value;
+
+        if (req.BusinessSummaryEnabled.HasValue)
+            pref.BusinessSummaryEnabled = req.BusinessSummaryEnabled.Value;
+
+        if (req.BusinessSummaryFrequency.HasValue)
+            pref.BusinessSummaryFrequency = (SummaryFrequency)req.BusinessSummaryFrequency.Value;
+
+        if (req.BusinessSummaryDayOfWeek.HasValue)
+            pref.BusinessSummaryDayOfWeek = req.BusinessSummaryDayOfWeek.Value;
+
+        if (req.BusinessSummaryIncludeCounts.HasValue)
+            pref.BusinessSummaryIncludeCounts = req.BusinessSummaryIncludeCounts.Value;
+
+        if (req.BusinessSummaryIncludeStageSummary.HasValue)
+            pref.BusinessSummaryIncludeStageSummary = req.BusinessSummaryIncludeStageSummary.Value;
+
+        if (req.BusinessSummaryIncludeGoals.HasValue)
+            pref.BusinessSummaryIncludeGoals = req.BusinessSummaryIncludeGoals.Value;
+
         await _uow.SaveChangesAsync(ct);
 
         return new NotificationPreferenceDto(
             pref.DailyDigestTime.ToString("HH:mm"),
             pref.DigestFrequencyDays,
+            pref.DigestDaysOfWeek,
             pref.SaleFollowUpDays,
             pref.DigestEnabled,
             pref.StageChangeNotificationsEnabled,
             pref.SaleNotificationsEnabled,
             pref.NewClientNotificationDaysAfter,
-            pref.NewClientNotificationTime);
+            pref.NewClientNotificationTime,
+            pref.EmailOnFriendRequests,
+            pref.EmailOnGeneralNotifications,
+            pref.BusinessSummaryEnabled,
+            (int)pref.BusinessSummaryFrequency,
+            pref.BusinessSummaryDayOfWeek,
+            pref.BusinessSummaryIncludeCounts,
+            pref.BusinessSummaryIncludeStageSummary,
+            pref.BusinessSummaryIncludeGoals);
     }
 }

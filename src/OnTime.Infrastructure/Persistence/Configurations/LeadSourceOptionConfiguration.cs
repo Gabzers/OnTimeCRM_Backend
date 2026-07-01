@@ -11,11 +11,11 @@ public class LeadSourceOptionConfiguration : IEntityTypeConfiguration<LeadSource
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Name).IsRequired().HasMaxLength(100);
 
-        builder.HasOne(x => x.Company)
+        builder.HasOne(x => x.User)
             .WithMany()
-            .HasForeignKey(x => x.CompanyId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(x => new { x.CompanyId, x.Code }).IsUnique();
+        builder.HasIndex(x => new { x.UserId, x.Code }).IsUnique();
     }
 }

@@ -18,31 +18,28 @@ public class LeadSourcesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
-        var result = await _leadSources.GetByCompanyAsync(User.RequireCompanyId(), ct);
+        var result = await _leadSources.GetByUserAsync(User.GetUserId(), ct);
         return Ok(result);
     }
 
     [HttpPost]
-    [Authorize(Policy = "ManagerOnly")]
     public async Task<IActionResult> Create([FromBody] CreateLeadSourceRequest request, CancellationToken ct)
     {
-        var result = await _leadSources.CreateAsync(User.RequireCompanyId(), request, ct);
+        var result = await _leadSources.CreateAsync(User.GetUserId(), request, ct);
         return Created($"api/lead-sources/{result.Id}", result);
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Policy = "ManagerOnly")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateLeadSourceRequest request, CancellationToken ct)
     {
-        var result = await _leadSources.UpdateAsync(id, User.RequireCompanyId(), request, ct);
+        var result = await _leadSources.UpdateAsync(id, User.GetUserId(), request, ct);
         return Ok(result);
     }
 
     [HttpPatch("{id:guid}/active")]
-    [Authorize(Policy = "ManagerOnly")]
     public async Task<IActionResult> SetActive(Guid id, [FromBody] SetLeadSourceActiveRequest request, CancellationToken ct)
     {
-        await _leadSources.SetActiveAsync(id, User.RequireCompanyId(), request.IsActive, ct);
+        await _leadSources.SetActiveAsync(id, User.GetUserId(), request.IsActive, ct);
         return NoContent();
     }
 }

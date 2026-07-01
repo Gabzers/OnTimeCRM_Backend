@@ -11,9 +11,12 @@ public class ClientStage : BaseEntity
     public bool IsFinal { get; set; } = false;
     public bool IsWon { get; set; } = false;
     public bool IsLost { get; set; } = false;
+    public bool AffectsTemperature { get; set; } = false;
+    public bool NotificationsEnabled { get; set; } = false;
 
     // Navigation
     public User User { get; set; } = null!;
     public ICollection<Client> Clients { get; set; } = new List<Client>();
     public ICollection<StageNotificationTemplate> Templates { get; set; } = new List<StageNotificationTemplate>();
+    public ICollection<ClientStageTemperatureRule> TemperatureRules { get; set; } = new List<ClientStageTemperatureRule>();
 }

@@ -31,10 +31,14 @@ public interface IStageRepository
 
     Task<StageNotificationTemplate?> FindTemplateAsync(Guid stageId, Guid templateId, CancellationToken ct = default);
 
+    Task<ClientStageTemperatureRule?> FindTemperatureRuleAsync(Guid stageId, Guid ruleId, CancellationToken ct = default);
+
     // ── Writes ───────────────────────────────────────────────────────────────
 
     void Add(ClientStage stage);
     void Remove(ClientStage stage);
     void AddTemplate(StageNotificationTemplate template);
     void RemoveTemplate(StageNotificationTemplate template);
+    void AddTemperatureRule(ClientStageTemperatureRule rule);
+    void RemoveTemperatureRule(ClientStageTemperatureRule rule);
 }

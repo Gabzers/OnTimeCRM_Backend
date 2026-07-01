@@ -175,12 +175,12 @@ public sealed class SaleRepository : ISaleRepository
             .Select(r => new LossReasonStatDto((int)r.Reason, r.Count))
             .ToList();
 
-        // 4. Hot deals (top 5) — same Hot/non-final-stage rule as ClientRepository.GetHotDealsAsync.
-        const int hot = 0; // DealTemperature.Hot
+        // 4. Deals (top 20) — all active non-final clients, ordered by temperature (Hot first).
         var hotDeals = await _db.Clients
-            .Where(c => c.UserId == userId && c.IsActive && (int)c.Temperature == hot && !c.CurrentStage.IsFinal)
-            .OrderByDescending(c => c.LastInteractionAt)
-            .Take(5)
+            .Where(c => c.UserId == userId && c.IsActive && !c.CurrentStage.IsFinal)
+            .OrderBy(c => c.Temperature)
+            .ThenByDescending(c => c.LastInteractionAt)
+            .Take(20)
             .Select(c => new
             {
                 id                = c.Id,

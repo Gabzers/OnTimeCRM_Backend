@@ -16,6 +16,8 @@ public interface IAppDbContext
     DbSet<UserSubscriptionPayment> UserSubscriptionPayments { get; }
     DbSet<ClientStage> ClientStages { get; }
     DbSet<StageNotificationTemplate> StageNotificationTemplates { get; }
+    DbSet<ClientStageTemperatureRule> ClientStageTemperatureRules { get; }
+    DbSet<ClientStageNotificationSeries> ClientStageNotificationSeries { get; }
     DbSet<VehicleBrand> VehicleBrands { get; }
     DbSet<VehicleModel> VehicleModels { get; }
     DbSet<Client> Clients { get; }

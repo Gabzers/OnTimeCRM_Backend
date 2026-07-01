@@ -15,6 +15,8 @@ public class AppDbContext : DbContext, IAppDbContext, IUnitOfWork
     public DbSet<UserSubscriptionPayment> UserSubscriptionPayments => Set<UserSubscriptionPayment>();
     public DbSet<ClientStage> ClientStages => Set<ClientStage>();
     public DbSet<StageNotificationTemplate> StageNotificationTemplates => Set<StageNotificationTemplate>();
+    public DbSet<ClientStageTemperatureRule> ClientStageTemperatureRules => Set<ClientStageTemperatureRule>();
+    public DbSet<ClientStageNotificationSeries> ClientStageNotificationSeries => Set<ClientStageNotificationSeries>();
     public DbSet<VehicleBrand> VehicleBrands => Set<VehicleBrand>();
     public DbSet<VehicleModel> VehicleModels => Set<VehicleModel>();
     public DbSet<VehicleModelVersion> VehicleModelVersions => Set<VehicleModelVersion>();

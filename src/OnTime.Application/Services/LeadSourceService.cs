@@ -17,46 +17,46 @@ public class LeadSourceService : ILeadSourceService
         _uow  = uow;
     }
 
-    public async Task<IEnumerable<LeadSourceOptionDto>> GetByCompanyAsync(
-        Guid companyId, CancellationToken ct = default)
+    public async Task<IEnumerable<LeadSourceOptionDto>> GetByUserAsync(
+        Guid userId, CancellationToken ct = default)
     {
-        var options = await _repo.GetByCompanyAsync(companyId, ct);
+        var options = await _repo.GetByUserAsync(userId, ct);
         return options.Select(ToDto);
     }
 
     public async Task<LeadSourceOptionDto> CreateAsync(
-        Guid companyId, CreateLeadSourceRequest req, CancellationToken ct = default)
+        Guid userId, CreateLeadSourceRequest req, CancellationToken ct = default)
     {
-        var code = await _repo.GetNextCodeAsync(companyId, ct);
-        var option = new LeadSourceOption { CompanyId = companyId, Code = code, Name = req.Name };
+        var code = await _repo.GetNextCodeAsync(userId, ct);
+        var option = new LeadSourceOption { UserId = userId, Code = code, Name = req.Name };
         _repo.Add(option);
         await _uow.SaveChangesAsync(ct);
         return ToDto(option);
     }
 
     public async Task<LeadSourceOptionDto> UpdateAsync(
-        Guid id, Guid companyId, UpdateLeadSourceRequest req, CancellationToken ct = default)
+        Guid id, Guid userId, UpdateLeadSourceRequest req, CancellationToken ct = default)
     {
-        var option = await RequireOwnedAsync(id, companyId, ct);
+        var option = await RequireOwnedAsync(id, userId, ct);
         option.Name = req.Name;
         await _uow.SaveChangesAsync(ct);
         return ToDto(option);
     }
 
     public async Task SetActiveAsync(
-        Guid id, Guid companyId, bool isActive, CancellationToken ct = default)
+        Guid id, Guid userId, bool isActive, CancellationToken ct = default)
     {
-        var option = await RequireOwnedAsync(id, companyId, ct);
+        var option = await RequireOwnedAsync(id, userId, ct);
         option.IsActive = isActive;
         await _uow.SaveChangesAsync(ct);
     }
 
-    private async Task<LeadSourceOption> RequireOwnedAsync(Guid id, Guid companyId, CancellationToken ct)
+    private async Task<LeadSourceOption> RequireOwnedAsync(Guid id, Guid userId, CancellationToken ct)
     {
         var option = await _repo.FindAsync(id, ct)
             ?? throw new ApiException(ApiErrorCatalog.LEAD_SOURCE_NOT_FOUND);
-        if (option.CompanyId != companyId)
-            throw new ApiException(ApiErrorCatalog.LEAD_SOURCE_WRONG_COMPANY);
+        if (option.UserId != userId)
+            throw new ApiException(ApiErrorCatalog.LEAD_SOURCE_WRONG_USER);
         return option;
     }
 

@@ -302,6 +302,7 @@ public class NotificationFlowTests : IAsyncLifetime
         var updatePrefsReq = new UpdateNotificationPreferenceRequest(
             DailyDigestTime: prefsResp!.DailyDigestTime,
             DigestFrequencyDays: prefsResp.DigestFrequencyDays,
+            DigestDaysOfWeek: prefsResp.DigestDaysOfWeek,
             SaleFollowUpDays: 7,
             DigestEnabled: prefsResp.DigestEnabled,
             StageChangeNotificationsEnabled: prefsResp.StageChangeNotificationsEnabled,

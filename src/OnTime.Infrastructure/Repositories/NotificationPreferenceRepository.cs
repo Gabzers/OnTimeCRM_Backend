@@ -32,10 +32,19 @@ public sealed class NotificationPreferenceRepository : INotificationPreferenceRe
     private static NotificationPreferenceDto ToDto(NotificationPreference p) =>
         new(p.DailyDigestTime.ToString("HH:mm"),
             p.DigestFrequencyDays,
+            p.DigestDaysOfWeek,
             p.SaleFollowUpDays,
             p.DigestEnabled,
             p.StageChangeNotificationsEnabled,
             p.SaleNotificationsEnabled,
             p.NewClientNotificationDaysAfter,
-            p.NewClientNotificationTime);
+            p.NewClientNotificationTime,
+            p.EmailOnFriendRequests,
+            p.EmailOnGeneralNotifications,
+            p.BusinessSummaryEnabled,
+            (int)p.BusinessSummaryFrequency,
+            p.BusinessSummaryDayOfWeek,
+            p.BusinessSummaryIncludeCounts,
+            p.BusinessSummaryIncludeStageSummary,
+            p.BusinessSummaryIncludeGoals);
 }

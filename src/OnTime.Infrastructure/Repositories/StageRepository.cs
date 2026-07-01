@@ -21,6 +21,7 @@ public sealed class StageRepository : IStageRepository
         var stages = await _db.ClientStages
             .AsNoTracking()
             .Include(s => s.Templates)
+            .Include(s => s.TemperatureRules)
             .Where(s => s.UserId == userId)
             .OrderBy(s => s.Order)
             .ToListAsync(ct);
@@ -40,6 +41,7 @@ public sealed class StageRepository : IStageRepository
     public async Task<ClientStage?> FindWithTemplatesAsync(Guid id, CancellationToken ct = default) =>
         await _db.ClientStages
             .Include(s => s.Templates)
+            .Include(s => s.TemperatureRules)
             .FirstOrDefaultAsync(s => s.Id == id, ct);
 
     public async Task<ClientStage?> FindFirstByUserAsync(Guid userId, CancellationToken ct = default) =>
@@ -88,20 +90,37 @@ public sealed class StageRepository : IStageRepository
         await _db.StageNotificationTemplates
             .FirstOrDefaultAsync(t => t.Id == templateId && t.StageId == stageId, ct);
 
+    public async Task<ClientStageTemperatureRule?> FindTemperatureRuleAsync(
+        Guid stageId,
+        Guid ruleId,
+        CancellationToken ct = default) =>
+        await _db.ClientStageTemperatureRules
+            .FirstOrDefaultAsync(r => r.Id == ruleId && r.StageId == stageId, ct);
+
     // ── Writes ────────────────────────────────────────────────────────────
 
     public void Add(ClientStage stage) => _db.ClientStages.Add(stage);
     public void Remove(ClientStage stage) => _db.ClientStages.Remove(stage);
     public void AddTemplate(StageNotificationTemplate template) => _db.StageNotificationTemplates.Add(template);
     public void RemoveTemplate(StageNotificationTemplate template) => _db.StageNotificationTemplates.Remove(template);
+    public void AddTemperatureRule(ClientStageTemperatureRule rule) => _db.ClientStageTemperatureRules.Add(rule);
+    public void RemoveTemperatureRule(ClientStageTemperatureRule rule) => _db.ClientStageTemperatureRules.Remove(rule);
 
     // ── Mapper ────────────────────────────────────────────────────────────
 
     private static ClientStageDto ToDto(ClientStage s, int clientCount = 0) =>
         new(s.Id, s.Name, s.Color, s.Order, s.IsFinal, s.IsWon, s.IsLost, s.IsActive,
+            s.AffectsTemperature, s.NotificationsEnabled,
             (s.Templates ?? Enumerable.Empty<StageNotificationTemplate>()).Select(ToTemplateDto),
+            (s.TemperatureRules ?? Enumerable.Empty<ClientStageTemperatureRule>())
+                .OrderBy(r => r.DaysAfterEntry).Select(ToTemperatureRuleDto),
             clientCount);
 
     private static StageTemplateDto ToTemplateDto(StageNotificationTemplate t) =>
-        new(t.Id, t.Title, t.DaysAfter, t.IsEnabled, t.TimeOfDay, t.OverridesNewClientNotification);
+        new(t.Id, t.Title, t.DaysAfter, t.IsEnabled, t.TimeOfDay, t.OverridesNewClientNotification,
+            t.IsRecurring, t.RecurrenceIntervalDays, t.FixedDayOfWeek, t.FixedDayOfMonth, t.MaxOccurrences,
+            t.SendEmail);
+
+    private static TemperatureRuleDto ToTemperatureRuleDto(ClientStageTemperatureRule r) =>
+        new(r.Id, r.DaysAfterEntry, r.Temperature);
 }

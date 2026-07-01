@@ -80,3 +80,9 @@ public enum DealTemperature
     Warm = 1,  // 4–10 days
     Cold = 2   // 10+ days or no interaction
 }
+
+public enum SummaryFrequency
+{
+    Weekly = 0,
+    Monthly = 1
+}

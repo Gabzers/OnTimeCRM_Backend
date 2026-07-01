@@ -41,7 +41,6 @@ public class AuthService : IAuthService
         {
             company = new Company { Name = req.CompanyName, IsActive = true };
             _repo.AddCompany(company);
-            SeedDefaultLeadSources(company);
 
             if (!string.IsNullOrWhiteSpace(req.BrandName))
             {
@@ -83,6 +82,7 @@ public class AuthService : IAuthService
         _repo.AddUser(user);
         if (brand is not null) _repo.AddMembership(new UserBrandMembership { User = user, Brand = brand });
 
+        SeedDefaultLeadSources(user);
         SeedDefaultStages(user);
         SeedDefaultNotificationPreference(user);
         SeedDefaultPublicProfile(user);
@@ -140,6 +140,7 @@ public class AuthService : IAuthService
         _repo.AddUser(user);
         if (brand is not null) _repo.AddMembership(new UserBrandMembership { User = user, Brand = brand });
 
+        SeedDefaultLeadSources(user);
         SeedDefaultStages(user);
         SeedDefaultNotificationPreference(user);
         SeedDefaultPublicProfile(user);
@@ -230,11 +231,11 @@ public class AuthService : IAuthService
             IsAutomotive:          user.Brand?.IsAutomotive ?? true);
     }
 
-    private void SeedDefaultLeadSources(Company company)
+    private void SeedDefaultLeadSources(User user)
     {
-        var names = new[] { "Stand", "Telefone", "OLX", "Standvirtual", "Instagram", "Facebook", "Referência", "Outro" };
+        var names = new[] { "Stand", "Telefone", "Instagram", "Facebook", "Recomendação", "Outro" };
         for (var code = 0; code < names.Length; code++)
-            _repo.AddLeadSource(new LeadSourceOption { Company = company, Code = code, Name = names[code] });
+            _repo.AddLeadSource(new LeadSourceOption { User = user, Code = code, Name = names[code] });
     }
 
     private void SeedDefaultStages(User user)

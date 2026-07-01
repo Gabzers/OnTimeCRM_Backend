@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OnTime.Application.Interfaces;
 using OnTime.Application.Interfaces.Repositories;
+using OnTime.Infrastructure.Email;
 using OnTime.Infrastructure.Persistence;
 using OnTime.Infrastructure.Repositories;
 using OnTime.Infrastructure.Security;
@@ -39,6 +40,8 @@ public static class InfrastructureServiceExtensions
 
         services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddScoped<IJwtService, JwtService>();
+
+        services.AddHttpClient<IEmailSender, BrevoEmailSender>();
 
         return services;
     }
